@@ -19,14 +19,6 @@ class Server:
         self._router = Router()
         self._dispatcher = dispatcher.Dispatcher(self._router, terminator)
 
-    @property
-    def dispatcher(self) -> dispatcher.Dispatcher:
-        return self._dispatcher
-
-    @dispatcher.setter
-    def dispatcher(self, value: dispatcher.Dispatcher):
-        self._dispatcher = value
-
     def include_router(self, router: Router):
         self._router.include_router(router)
 
@@ -73,7 +65,7 @@ class Server:
                 if not data:
                     break
 
-                response = await self._dispatcher.dispatch(data)
+                response = await self._dispatcher._dispatch(data)
                 if response:
                     writer.write(response)
                     await writer.drain()

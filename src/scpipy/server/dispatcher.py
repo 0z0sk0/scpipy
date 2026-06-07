@@ -9,7 +9,7 @@ class Dispatcher:
         self._router = router
         self._terminator = terminator
 
-    async def dispatch(self, data: bytes) -> bytes | None:
+    async def _dispatch(self, data: bytes) -> bytes | None:
         processed_data = data.decode()
         command, args = self._parse_command(processed_data)
 
