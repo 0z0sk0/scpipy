@@ -12,3 +12,7 @@ class LogicException(Exception):
 
 class ScpiException(Exception):
     pass
+
+
+class RouteNotFound(Exception):
+    pass
