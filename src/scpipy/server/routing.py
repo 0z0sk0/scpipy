@@ -1,5 +1,5 @@
 import dataclasses
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
 from scpipy.server.exceptions import RouteNotFound
 
@@ -31,12 +31,16 @@ class Router:
 
         return wrapper
 
-    def include_router(self, router: Router):
-        for route in router.routes.values():
-            if route.command in self.routes.keys():
-                raise ValueError('Route already registered')
+    def include_router(self, routers: Router | Iterable[Router]):
+        if isinstance(routers, Router):
+            routers = [routers]
 
-            self._add_route(route.command, route.handler)
+        for router in routers:
+            for route in router.routes.values():
+                if route.command in self.routes.keys():
+                    raise ValueError('Route already registered')
+
+                self._add_route(route.command, route.handler)
 
     def _add_route(self, command: str, handler: Callable):
         if command in self._routes.keys():

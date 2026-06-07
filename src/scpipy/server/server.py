@@ -1,5 +1,7 @@
 import asyncio
 
+from collections.abc import Iterable
+
 from . import exceptions
 from . import dispatcher
 from scpipy.server.routing import Router
@@ -19,8 +21,8 @@ class Server:
         self._router = Router()
         self._dispatcher = dispatcher.Dispatcher(self._router, terminator)
 
-    def include_router(self, router: Router):
-        self._router.include_router(router)
+    def include_router(self, routers: Router | Iterable[Router]):
+        self._router.include_router(routers)
 
     def run(self):
         if self._host is None or self._port is None:
