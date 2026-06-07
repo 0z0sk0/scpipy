@@ -1,7 +1,10 @@
 import asyncio
 
+from collections.abc import Iterable
+
 from . import exceptions
 from . import dispatcher
+from scpipy.server.routing import Router
 
 
 class Server:
@@ -15,15 +18,11 @@ class Server:
         self._client_tasks: set[asyncio.Task] = set()
         self._client_writers: set[asyncio.StreamWriter] = set()
 
-        self._dispatcher = dispatcher.Dispatcher(terminator)
+        self._router = Router()
+        self._dispatcher = dispatcher.Dispatcher(self._router, terminator)
 
-    @property
-    def dispatcher(self) -> dispatcher.Dispatcher:
-        return self._dispatcher
-
-    @dispatcher.setter
-    def dispatcher(self, value: dispatcher.Dispatcher):
-        self._dispatcher = value
+    def include_router(self, routers: Router | Iterable[Router]):
+        self._router.include_router(routers)
 
     def run(self):
         if self._host is None or self._port is None:
@@ -68,7 +67,7 @@ class Server:
                 if not data:
                     break
 
-                response = await self._dispatcher.dispatch(data)
+                response = await self._dispatcher._dispatch(data)
                 if response:
                     writer.write(response)
                     await writer.drain()
