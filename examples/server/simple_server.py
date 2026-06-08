@@ -1,4 +1,4 @@
-from scpipy.server import Server, Router
+from scpipy.server import Server, Router, Context
 
 HOST = '127.0.0.1'
 PORT = 5025
@@ -7,7 +7,7 @@ router = Router()
 
 
 @router.register('SYSTem:READy[:STATe]?')
-def syst_ready_handler():
+def syst_ready_handler(context: Context):
     return '1'
 
 
