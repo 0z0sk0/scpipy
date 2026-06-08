@@ -1,10 +1,12 @@
 import asyncio
 
-from scpipy.server.exceptions import ScpiException, RouteNotFound
+from scpipy.server.exceptions import RouteNotFound
 from scpipy.server.routing import Router, Route
+from scpipy.server.context import Context
 
 from scpipy.shared.parser import Parser, ParseError
 from scpipy.shared.ast import Command, Node
+from scpipy.shared.errors import ScpiException, DefaultScpiErrors
 
 
 class Dispatcher:
@@ -14,19 +16,18 @@ class Dispatcher:
 
         self._parser = Parser()
 
-    async def _dispatch(self, data: bytes) -> bytes | None:
+    async def _dispatch(self, context: Context, data: bytes) -> bytes | None:
         line = data.decode()
 
         try:
             commands = self._parser.parse(line)
         except ParseError:
-            # TODO: raise exceptions as standard SCPI errors
-            raise ScpiException('Syntax error')
+            raise ScpiException(DefaultScpiErrors.SYNTAX_ERROR.value)
 
         responses = []
 
         for command in commands:
-            response = await self._dispatch_command(command)
+            response = await self._dispatch_command(context, command)
             if response is not None:
                 responses.append(response)
 
@@ -36,20 +37,20 @@ class Dispatcher:
         payload = ';'.join(responses) + self._terminator
         return payload.encode()
 
-    async def _dispatch_command(self, command: Command) -> str | None:
+    async def _dispatch_command(
+        self, context: Context, command: Command
+    ) -> str | None:
         try:
             route = self._route(command)
         except RouteNotFound:
-            # TODO: raise exceptions as standard SCPI errors
-            raise ScpiException('Unknown command')
+            raise ScpiException(DefaultScpiErrors.COMMAND_HEADER_ERROR.value)
 
         args = [arg.value for arg in command.args]
 
         try:
-            result = route.handler(*args)
+            result = route.handler(context, *args)
         except TypeError:
-            # TODO: raise exceptions as standard SCPI errors
-            raise ScpiException('Too many args to unpack')
+            raise ScpiException(DefaultScpiErrors.DATA_TYPE_ERROR.value)
 
         if asyncio.iscoroutine(result):
             result = await result

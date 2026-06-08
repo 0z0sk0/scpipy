@@ -5,10 +5,21 @@ from collections.abc import Iterable
 from . import exceptions
 from . import dispatcher
 from scpipy.server.routing import Router
+from scpipy.server.context import Context
+from scpipy.server.builtin_router import builtin_router
+
+from scpipy.shared.errors import ScpiException
 
 
 class Server:
-    def __init__(self, host: str, port: int, terminator: str = '\n'):
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        terminator: str = '\n',
+        error_queue_size: int = 100,
+        shared_context: bool = False,
+    ):
         self._host: str = host
         self._port: int = port
 
@@ -18,8 +29,14 @@ class Server:
         self._client_tasks: set[asyncio.Task] = set()
         self._client_writers: set[asyncio.StreamWriter] = set()
 
-        self._router = Router()
+        self._router = builtin_router
         self._dispatcher = dispatcher.Dispatcher(self._router, terminator)
+
+        self._error_queue_size = error_queue_size
+
+        self._context = None
+        if shared_context:
+            self._context = self._create_context()
 
     def include_router(self, routers: Router | Iterable[Router]):
         self._router.include_router(routers)
@@ -58,6 +75,8 @@ class Server:
         if self._dispatcher is None:
             raise exceptions.LogicException('Dispatcher was not configured')
 
+        context = self._get_context()
+
         task = asyncio.current_task()
         self._init_client(writer, task)
 
@@ -67,7 +86,12 @@ class Server:
                 if not data:
                     break
 
-                response = await self._dispatcher._dispatch(data)
+                try:
+                    response = await self._dispatcher._dispatch(context, data)
+                except ScpiException as exc:
+                    context.push_error(exc.error)
+                    continue
+
                 if response:
                     writer.write(response)
                     await writer.drain()
@@ -124,3 +148,16 @@ class Server:
 
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+
+    def _get_context(self) -> Context:
+        if self._shared_context():
+            assert self._context is not None
+            return self._context
+
+        return self._create_context()
+
+    def _create_context(self) -> Context:
+        return Context(error_queue_size=self._error_queue_size)
+
+    def _shared_context(self) -> bool:
+        return self._context is not None
