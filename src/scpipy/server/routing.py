@@ -12,7 +12,7 @@ class Route:
     command: str
     handler: Callable
 
-    ast: Command = dataclasses.field(init=False)
+    pattern: Command = dataclasses.field(init=False)
 
     def __post_init__(self):
         parser = Parser()
