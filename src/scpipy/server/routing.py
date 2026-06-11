@@ -3,11 +3,25 @@ from collections.abc import Callable, Iterable
 
 from scpipy.server.exceptions import RouteNotFound
 
+from scpipy.shared.parser import Parser
+from scpipy.shared.ast import Command
 
-@dataclasses.dataclass(frozen=True)
+
+@dataclasses.dataclass
 class Route:
     command: str
     handler: Callable
+
+    pattern: Command = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        parser = Parser()
+        commands = parser.parse(self.command)
+
+        if len(commands) != 1:
+            raise ValueError('Route must contain exactly one command')
+
+        self.pattern = commands[0]
 
 
 class Router:
@@ -43,7 +57,12 @@ class Router:
                 self._add_route(route.command, route.handler)
 
     def _add_route(self, command: str, handler: Callable):
-        if command in self._routes.keys():
+        route = Route(command=command, handler=handler)
+
+        if any(
+            existing.pattern == route.pattern
+            for existing in self._routes.values()
+        ):
             raise ValueError('Route already registered')
 
-        self._routes[command] = Route(command=command, handler=handler)
+        self._routes[command] = route

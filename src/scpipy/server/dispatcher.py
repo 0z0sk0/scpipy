@@ -1,7 +1,10 @@
 import asyncio
 
 from scpipy.server.exceptions import ScpiException, RouteNotFound
-from scpipy.server.routing import Router
+from scpipy.server.routing import Router, Route
+
+from scpipy.shared.parser import Parser, ParseError
+from scpipy.shared.ast import Command, Node
 
 
 class Dispatcher:
@@ -9,31 +12,91 @@ class Dispatcher:
         self._router = router
         self._terminator = terminator
 
+        self._parser = Parser()
+
     async def _dispatch(self, data: bytes) -> bytes | None:
-        processed_data = data.decode()
-        command, args = self._parse_command(processed_data)
+        line = data.decode()
 
         try:
-            route = self._router.route(command)
+            commands = self._parser.parse(line)
+        except ParseError:
+            # TODO: raise exceptions as standard SCPI errors
+            raise ScpiException('Syntax error')
+
+        responses = []
+
+        for command in commands:
+            response = await self._dispatch_command(command)
+            if response is not None:
+                responses.append(response)
+
+        if not responses:
+            return None
+
+        payload = ';'.join(responses) + self._terminator
+        return payload.encode()
+
+    async def _dispatch_command(self, command: Command) -> str | None:
+        try:
+            route = self._route(command)
         except RouteNotFound:
             # TODO: raise exceptions as standard SCPI errors
             raise ScpiException('Unknown command')
 
-        result = route.handler(args)
+        args = [arg.value for arg in command.args]
+
+        try:
+            result = route.handler(*args)
+        except TypeError:
+            # TODO: raise exceptions as standard SCPI errors
+            raise ScpiException('Too many args to unpack')
 
         if asyncio.iscoroutine(result):
             result = await result
 
-        if result:
-            result += self._terminator
-            return result.encode()
+        if result is None:
+            return None
 
-    def _parse_command(self, line: str) -> tuple[str, list[str]]:
-        # TODO: must be determined in shared component
-        # TODO: parse carefully
+        return str(result)
 
-        parts = line.strip().split()
-        command = parts[0].upper()
-        args = parts[1:]
+    def _route(self, command: Command) -> Route:
+        for route in self._router.routes.values():
+            if self._match_command(command, route.pattern):
+                return route
 
-        return command, args
+        raise RouteNotFound
+
+    def _match_command(self, command: Command, pattern: Command) -> bool:
+        if command.common != pattern.common:
+            return False
+
+        if command.query != pattern.query:
+            return False
+
+        return self._match_nodes(command.nodes, pattern.nodes)
+
+    def _match_nodes(
+        self, nodes: list[Node], pattern_nodes: list[Node]
+    ) -> bool:
+        node_index = 0
+
+        for pattern_node in pattern_nodes:
+            if node_index >= len(nodes):
+                return pattern_node.optional
+
+            if self._match_node(nodes[node_index], pattern_node):
+                node_index += 1
+            elif not pattern_node.optional:
+                return False
+
+        return node_index == len(nodes)
+
+    @staticmethod
+    def _match_node(node: Node, pattern: Node) -> bool:
+        if node.short != pattern.short:
+            return False
+
+        node_arg = node.arg.value if node.arg is not None else None
+        pattern_arg = pattern.arg.value if pattern.arg is not None else None
+
+        return node_arg == pattern_arg

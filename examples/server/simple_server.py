@@ -6,8 +6,8 @@ PORT = 5025
 router = Router()
 
 
-@router.register('SYST:READ?')
-def syst_ready_handler(*args, **kwargs):
+@router.register('SYSTem:READy[:STATe]?')
+def syst_ready_handler():
     return '1'
 
 
