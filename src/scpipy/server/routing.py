@@ -45,7 +45,7 @@ class Router:
 
         return wrapper
 
-    def include_router(self, routers: Router | Iterable[Router]):
+    def include_router(self, routers: 'Router' | Iterable['Router']):
         if isinstance(routers, Router):
             routers = [routers]
 
