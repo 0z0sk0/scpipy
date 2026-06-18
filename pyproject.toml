@@ -1,14 +1,18 @@
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+requires = ['setuptools>=61']
+build-backend = 'setuptools.build_meta'
 
 [project]
-name = "scpipy"
-version = "0.1.0"
-description = "Python SCPI I/O library with built-in client and server."
+name = 'scpipy'
+version = '0.1.0'
+description = 'Python SCPI I/O library with built-in client and server.'
+dependencies = ['pyvisa']
+
+[project.optional-dependencies]
+test = ['pytest']
 
 [tool.setuptools.package-dir]
-"" = "src"
+'' = 'src'
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ['src']
