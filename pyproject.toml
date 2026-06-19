@@ -4,9 +4,17 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'scpipy'
-version = '0.1.0'
 description = 'Python SCPI I/O library with built-in client and server.'
+version = '1.0.1'
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
 dependencies = ['pyvisa']
+
+[project.urls]
+homepage      = "https://github.com/0z0sk0/scpipy"
+documentation = "https://scpipy.readthedocs.org/en/latest/"
+repository    = "https://github.com/0z0sk0/scpipy"
 
 [project.optional-dependencies]
 test = ['pytest']
