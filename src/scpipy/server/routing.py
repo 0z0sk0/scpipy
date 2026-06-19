@@ -1,3 +1,4 @@
+from __future__ import annotations
 import dataclasses
 from collections.abc import Callable, Iterable
 
@@ -45,7 +46,7 @@ class Router:
 
         return wrapper
 
-    def include_router(self, routers: 'Router' | Iterable['Router']):
+    def include_router(self, routers: Router | Iterable[Router]):
         if isinstance(routers, Router):
             routers = [routers]
 
