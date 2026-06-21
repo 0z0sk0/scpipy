@@ -7,7 +7,10 @@ from scpipy.shared.utils import (
     format_scpi_short_keyword,
 )
 
-_NODE_TOKEN_RE = re.compile(r'^([A-Z*]+)(\d+)?$')
+_NODE_TOKEN_RE = re.compile(
+    r'^(?P<keyword>[A-Z*]+)(?:(?P<index>\d+)|<(?P<pattern>[A-Za-z_][A-Za-z0-9_]*)>)?$',
+    re.IGNORECASE,
+)
 
 
 class Parser:
@@ -157,8 +160,8 @@ class Parser:
 
     @classmethod
     def _build_node(cls, token: str, optional: bool) -> Node:
-        keyword, arg = cls._split_node(token)
-        arg = cls._build_arg(arg) if arg is not None else None
+        keyword, arg, is_pattern = cls._split_node(token)
+        arg = cls._build_arg(arg, is_pattern) if arg is not None else None
 
         return Node(
             short=format_scpi_short_keyword(keyword),
@@ -168,26 +171,32 @@ class Parser:
         )
 
     @staticmethod
-    def _build_arg(value: str) -> Argument:
-        return Argument(value=value)
+    def _build_arg(value: str, is_pattern: bool = False) -> Argument:
+        return Argument(value=value, pattern=is_pattern)
 
     @classmethod
     def _build_args(cls, args: list[str]) -> list[Argument]:
         return [cls._build_arg(arg) for arg in args]
 
     @staticmethod
-    def _split_node(node: str) -> tuple[str, str | None]:
+    def _split_node(node: str) -> tuple[str, str | None, bool]:
         node = node.strip()
         if not node:
             raise ParseError('Invalid node')
 
-        match = _NODE_TOKEN_RE.fullmatch(node.upper())
+        match = _NODE_TOKEN_RE.fullmatch(node)
         if not match:
             raise ParseError('Invalid node')
 
-        keyword = match.group(1)
-        arg = match.group(2)
-        return keyword, arg
+        keyword = match.group('keyword').upper()
+
+        if match.group('index') is not None:
+            return keyword, match.group('index'), False
+
+        if match.group('pattern') is not None:
+            return keyword, match.group('pattern'), True
+
+        return keyword, None, False
 
     @staticmethod
     def _split_node_and_args(line: str) -> tuple[str, list[str]]:
