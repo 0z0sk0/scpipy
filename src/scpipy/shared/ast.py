@@ -4,6 +4,7 @@ import dataclasses
 @dataclasses.dataclass(frozen=True, slots=True)
 class Argument:
     value: str
+    pattern: bool = False
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
