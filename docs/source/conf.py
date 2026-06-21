@@ -2,14 +2,13 @@ from pathlib import Path
 import sys
 import tomllib
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / 'src'
+ROOT = Path(__file__).resolve().parents[0]
+DOC = ROOT
+SRC = DOC / 'src'
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-pyproject = tomllib.loads(
-    (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
-)
+pyproject = tomllib.loads((DOC / 'pyproject.toml').read_text(encoding='utf-8'))
 project_meta = pyproject['project']
 
 project = project_meta['name']
@@ -21,11 +20,6 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
 ]
-
-source_suffix = '.rst'
-master_doc = 'index'
-
-pygments_style = 'sphinx'
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
