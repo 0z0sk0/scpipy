@@ -1,5 +1,5 @@
 SCPIpy: Python SCPI I/O library with built-in async client and server
-============================================
+=====================================================================
 
 
 SCPIpy is a Python SCPI I/O library with a built-in client and server.
