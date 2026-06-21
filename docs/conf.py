@@ -1,4 +1,20 @@
-from importlib.metadata import version as get_version
+from pathlib import Path
+import sys
+import tomllib
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / 'src'
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+pyproject = tomllib.loads(
+    (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
+)
+project_meta = pyproject['project']
+
+project = project_meta['name']
+author = '0Z0SK0'
+version = release = project_meta['version']
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -8,12 +24,6 @@ extensions = [
 
 source_suffix = '.rst'
 master_doc = 'index'
-
-project = 'scpipy'
-author = '0Z0SK0'
-
-version = get_version(project)
-release = version
 
 pygments_style = 'sphinx'
 
