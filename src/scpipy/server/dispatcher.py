@@ -41,14 +41,14 @@ class Dispatcher:
         self, context: Context, command: Command
     ) -> str | None:
         try:
-            route = self._route(command)
+            route, bindings = self._route(command)
         except RouteNotFound:
             raise ScpiException(DefaultScpiErrors.COMMAND_HEADER_ERROR.value)
 
-        args = [arg.value for arg in command.args]
+        positional_args = [arg.value for arg in command.args]
 
         try:
-            result = route.handler(context, *args)
+            result = route.handler(context, *positional_args, **bindings)
         except TypeError:
             raise ScpiException(DefaultScpiErrors.DATA_TYPE_ERROR.value)
 
@@ -60,44 +60,64 @@ class Dispatcher:
 
         return str(result)
 
-    def _route(self, command: Command) -> Route:
+    def _route(self, command: Command) -> tuple[Route, dict[str, str]]:
         for route in self._router.routes.values():
-            if self._match_command(command, route.pattern):
-                return route
+            bindings = self._match_command(command, route.pattern)
+            if bindings is not None:
+                return route, bindings
 
         raise RouteNotFound
 
-    def _match_command(self, command: Command, pattern: Command) -> bool:
+    def _match_command(
+        self, command: Command, pattern: Command
+    ) -> dict[str, str] | None:
         if command.common != pattern.common:
-            return False
+            return None
 
         if command.query != pattern.query:
-            return False
+            return None
 
         return self._match_nodes(command.nodes, pattern.nodes)
 
     def _match_nodes(
         self, nodes: list[Node], pattern_nodes: list[Node]
-    ) -> bool:
+    ) -> dict[str, str] | None:
         node_index = 0
+        bindings = {}
 
         for pattern_node in pattern_nodes:
             if node_index >= len(nodes):
-                return pattern_node.optional
+                if pattern_node.optional:
+                    continue
+                return None
 
-            if self._match_node(nodes[node_index], pattern_node):
+            matched = self._match_node(nodes[node_index], pattern_node)
+            if matched is not None:
+                bindings.update(matched)
                 node_index += 1
             elif not pattern_node.optional:
-                return False
+                return None
 
-        return node_index == len(nodes)
+        if node_index != len(nodes):
+            return None
+
+        return bindings
 
     @staticmethod
-    def _match_node(node: Node, pattern: Node) -> bool:
+    def _match_node(node: Node, pattern: Node) -> dict[str, str] | None:
         if node.short != pattern.short:
-            return False
+            return None
 
         node_arg = node.arg.value if node.arg is not None else None
         pattern_arg = pattern.arg.value if pattern.arg is not None else None
 
-        return node_arg == pattern_arg
+        if pattern_arg is None:
+            return {} if node_arg is None else None
+
+        if node_arg is None:
+            return None
+
+        if pattern.arg.pattern:
+            return {pattern_arg: node_arg}
+
+        return {} if node_arg == pattern_arg else None
