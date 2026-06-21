@@ -129,34 +129,38 @@ class Parser:
         if not line:
             raise ParseError('Invalid node')
 
-        if '[:' not in line:
-            if '[' in line or ']' in line:
+        nodes = []
+        pos = 0
+        length = len(line)
+
+        if not line.startswith('[:'):
+            next_optional = line.find('[:')
+            if next_optional == -1:
+                return [cls._build_node(line, optional=False)]
+
+            required = line[:next_optional].strip()
+            if not required:
+                raise ParseError('Invalid node')
+
+            nodes.append(cls._build_node(required, optional=False))
+            pos = next_optional
+
+        while pos < length:
+            if not line.startswith('[:', pos):
                 raise ParseError('Invalid bracket usage')
-            return [cls._build_node(line, optional=False)]
 
-        required_node, optional_node = cls._split_optional_node(line)
+            end = line.find(']', pos)
+            if end == -1:
+                raise ParseError('Invalid bracket usage')
 
-        nodes: list[Node] = []
-        if required_node:
-            nodes.append(cls._build_node(required_node, optional=False))
-        nodes.append(cls._build_node(optional_node, optional=True))
+            token = line[pos + 2 : end].strip()
+            if not token:
+                raise ParseError('Invalid node')
+
+            nodes.append(cls._build_node(token, optional=True))
+            pos = end + 1
+
         return nodes
-
-    @staticmethod
-    def _split_optional_node(line: str) -> tuple[str, str]:
-        if not line.endswith(']'):
-            raise ParseError('Invalid bracket usage')
-
-        body = line[:-1]
-        required_node, optional_node = body.split('[:', 1)
-
-        required_node = required_node.strip()
-        optional_node = optional_node.strip()
-
-        if not optional_node:
-            raise ParseError('Invalid node')
-
-        return required_node, optional_node
 
     @classmethod
     def _build_node(cls, token: str, optional: bool) -> Node:
