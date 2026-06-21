@@ -7,6 +7,7 @@ from . import dispatcher
 from scpipy.server.routing import Router
 from scpipy.server.context import Context
 from scpipy.server.builtin_router import builtin_router
+from scpipy.server.lifespan_manager import LifespanManager
 
 from scpipy.shared.errors import ScpiException
 
@@ -19,6 +20,8 @@ class Server:
         terminator: str = '\n',
         error_queue_size: int = 100,
         shared_context: bool = False,
+        *,
+        lifespan=None,
     ):
         self._host: str = host
         self._port: int = port
@@ -34,9 +37,15 @@ class Server:
 
         self._error_queue_size = error_queue_size
 
+        self._lifespan_manager = LifespanManager(lifespan)
+
         self._context = None
         if shared_context:
             self._context = self._create_context()
+
+    @property
+    def state(self) -> dict:
+        return self._lifespan_manager.state
 
     def include_router(self, routers: Router | Iterable[Router]):
         self._router.include_router(routers)
@@ -57,14 +66,25 @@ class Server:
         self._stop_event.set()
 
     async def _listen(self):
-        self._server = await asyncio.start_server(
-            self._handle_client, self._host, self._port
-        )
+        await self._lifespan_manager.startup(self)
 
-        await self._wait_stop()
-        await self._close()
-        await self._close_writers()
-        await self._close_tasks()
+        try:
+            self._server = await asyncio.start_server(
+                self._handle_client, self._host, self._port
+            )
+
+            await self._wait_stop()
+
+        except asyncio.CancelledError:
+            pass
+        except KeyboardInterrupt:
+            pass
+        finally:
+            await self._close()
+            await self._close_writers()
+            await self._close_tasks()
+
+            await self._lifespan_manager.shutdown()
 
     async def _wait_stop(self):
         await self._stop_event.wait()
@@ -138,7 +158,7 @@ class Server:
         if writers:
             await asyncio.gather(
                 *(writer.wait_closed() for writer in writers),
-                return_exceptions=True
+                return_exceptions=True,
             )
 
     async def _close_tasks(self):
@@ -157,7 +177,9 @@ class Server:
         return self._create_context()
 
     def _create_context(self) -> Context:
-        return Context(error_queue_size=self._error_queue_size)
+        return Context(
+            error_queue_size=self._error_queue_size, state=self.state
+        )
 
     def _shared_context(self) -> bool:
         return self._context is not None
