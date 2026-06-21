@@ -16,6 +16,12 @@ to test instruments (via PyVISA) and for building SCPI servers.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Advanced guides
+
+   guide/lifespan
+
+.. toctree::
+   :maxdepth: 2
    :caption: API Reference
 
    api/client
