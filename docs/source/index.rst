@@ -2,7 +2,7 @@ SCPIpy: Python SCPI I/O library with built-in async client and server
 ============================================
 
 
-**SCPIpy** is a Python SCPI I/O library with a built-in client and server.
+SCPIpy is a Python SCPI I/O library with a built-in client and server.
 It provides a clean, asyncio-based interface for sending SCPI commands
 to test instruments (via PyVISA) and for building SCPI servers.
 
@@ -11,11 +11,8 @@ to test instruments (via PyVISA) and for building SCPI servers.
    :maxdepth: 2
    :caption: User Guide
 
-   guide/installation
-   guide/quickstart
-   guide/client
-   guide/server
-   guide/shared
+   introduction/installation
+   introduction/quickstart
 
 .. toctree::
    :maxdepth: 2
@@ -29,7 +26,7 @@ to test instruments (via PyVISA) and for building SCPI servers.
    :maxdepth: 1
    :caption: Project
 
-   license
+   introduction/license
 
 
 Installation
