@@ -19,10 +19,4 @@ def source_handler(context: Context, value: float, channel: int, some: int):
 if __name__ == '__main__':
     server = Server(HOST, PORT)
     server.include_router(router)
-
-    try:
-        server.run()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.stop()
+    server.run()
