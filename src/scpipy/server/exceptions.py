@@ -10,5 +10,17 @@ class LogicException(Exception):
     """Raised when the internal server state is inconsistent."""
 
 
-class RouteNotFound(Exception):
+class DispatcherError(Exception):
+    """Base exception for dispatcher-related failures."""
+
+
+class RouteNotFound(DispatcherError):
     """Raised when no route matches the requested SCPI command."""
+
+
+class ArgumentBindingError(DispatcherError):
+    """Raised when a route handler cannot be called with parsed arguments."""
+
+
+class ParserSyntaxError(DispatcherError):
+    """Raised when a SCPI syntax error occurs."""

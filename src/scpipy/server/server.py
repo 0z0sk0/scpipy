@@ -6,6 +6,7 @@ from . import exceptions
 from . import dispatcher
 from scpipy.server.routing import Router
 from scpipy.server.context import Context
+from scpipy.server.exception_handler import ExceptionHandler
 from scpipy.server.builtin_router import builtin_router
 from scpipy.server.lifespan_manager import LifespanManager
 
@@ -57,7 +58,10 @@ class Server:
         self._client_writers: set[asyncio.StreamWriter] = set()
 
         self._router = builtin_router
-        self._dispatcher = dispatcher.Dispatcher(self._router, terminator)
+        self._exception_handler = ExceptionHandler()
+        self._dispatcher = dispatcher.Dispatcher(
+            self._router, terminator, exception_handler=self._exception_handler
+        )
 
         self._error_queue_size = error_queue_size
 
@@ -85,6 +89,13 @@ class Server:
         :type routers: Router | Iterable[Router]
         """
         self._router.include_router(routers)
+
+    def add_exception_handler(
+        self,
+        exc_type: type[Exception],
+        handler: ExceptionHandler | None = None,
+    ):
+        return self._exception_handler.add_exception_handler(exc_type, handler)
 
     def run(self):
         """
