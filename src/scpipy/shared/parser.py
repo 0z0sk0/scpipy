@@ -14,7 +14,28 @@ _NODE_TOKEN_RE = re.compile(
 
 
 class Parser:
+    """
+    Parse SCPI command lines into command objects.
+
+    Converts an input SCPI program message into a list of parsed
+    ``Command`` instances that can be routed and dispatched.
+
+    The parser supports full by SCPI protocol.
+    """
+
     def parse(self, line: str) -> list[Command]:
+        """
+        Parse a SCPI command line.
+
+        :param line: Raw SCPI command line.
+        :type line: str
+
+        :return: List of parsed SCPI commands.
+        :rtype: list[Command]
+
+        :raises ParseError: If the command line is empty or contains invalid
+            SCPI syntax.
+        """
         result = []
         scope_nodes = []
 
