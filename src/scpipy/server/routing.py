@@ -61,7 +61,7 @@ class Router:
         """
         Register an SCPI command route.
 
-        :param command: SCPI command pattern to register, for example: '*IDN?', '*OPC?', 'SENSe:FREQuency:CENTer?'
+        :param command: SCPI command pattern to register, for example: '*IDN?', '*OPC?', 'SENSe:FREQuency:CENTer?'.
         :type command: str
         :param handler: Callable that will be invoked when the command is dispatched.
         :type handler: Callable
