@@ -1,5 +1,5 @@
 Custom exception handler
-===================
+========================
 
 The SCPI server supports custom exception handlers for translating internal
 Python exceptions into SCPI errors.
