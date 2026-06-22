@@ -10,6 +10,18 @@ from scpipy.shared.errors import ScpiException, DefaultScpiErrors
 
 
 class Dispatcher:
+    """
+    Dispatch SCPI commands to registered route handlers.
+
+    Parses incoming SCPI messages, resolves matching routes, invokes the
+    corresponding handlers, and encodes the response payload.
+
+    :param router: Router used to resolve SCPI command handlers.
+    :type router: Router
+    :param terminator: Line terminator appended to outgoing responses.
+    :type terminator: str
+    """
+
     def __init__(self, router: Router, terminator: str):
         self._router = router
         self._terminator = terminator
