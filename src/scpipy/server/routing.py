@@ -42,7 +42,7 @@ class Router:
 
     def register(self, command: str):
         def wrapper(func: Callable):
-            self._add_route(command, func)
+            self.add_route(command, func)
 
         return wrapper
 
@@ -55,9 +55,19 @@ class Router:
                 if route.command in self.routes.keys():
                     raise ValueError('Route already registered')
 
-                self._add_route(route.command, route.handler)
+                self.add_route(route.command, route.handler)
 
-    def _add_route(self, command: str, handler: Callable):
+    def add_route(self, command: str, handler: Callable):
+        """
+        Register an SCPI command route.
+
+        :param command: SCPI command pattern to register, for example: '*IDN?', '*OPC?', 'SENSe:FREQuency:CENTer?'
+        :type command: str
+        :param handler: Callable that will be invoked when the command is dispatched.
+        :type handler: Callable
+
+        :raises ValueError: if the command is already registered.
+        """
         route = Route(command=command, handler=handler)
 
         if any(
