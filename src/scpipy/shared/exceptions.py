@@ -1,2 +1,2 @@
 class ParseError(Exception):
-    pass
+    """Raised when a SCPI command line cannot be parsed."""

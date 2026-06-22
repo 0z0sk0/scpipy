@@ -1,10 +1,10 @@
 class ClientTimeoutError(Exception):
-    pass
+    """Raised when a client operation exceeds the configured timeout."""
 
 
 class ClientConnectionError(Exception):
-    pass
+    """Raised when the client cannot connect or is used in an invalid state."""
 
 
 class ClientStopped(Exception):
-    pass
+    """Raised when an operation is attempted on a stopped client."""
