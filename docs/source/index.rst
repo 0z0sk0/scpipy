@@ -19,6 +19,7 @@ to test instruments (via PyVISA) and for building SCPI servers.
    :caption: Advanced guides
 
    guide/lifespan
+   guide/custom_exception_handler
 
 .. toctree::
    :maxdepth: 2
