@@ -7,6 +7,19 @@ from scpipy.client.models import QueueItem, OperationType
 
 
 class Worker:
+    """
+    Execute instrument operations in a background task.
+
+    Serializes access to a message-based VISA instrument through an internal
+    asynchronous queue and provides asynchronous write, read, query, and close
+    operations.
+
+    :param instrument: Message-based VISA instrument used for I/O operations.
+    :type instrument: pyvisa.resources.MessageBasedResource
+    :param queue_size: Maximum number of queued operations. A value of ``0``
+        uses an unbounded queue.
+    :type queue_size: int
+    """
 
     def __init__(
         self,
@@ -23,6 +36,11 @@ class Worker:
         self._closed = False
 
     def start(self):
+        """
+        Start the background worker task.
+
+        If the worker is already started, this method returns immediately.
+        """
         if self._task is not None:
             return
         self._task = asyncio.create_task(
@@ -30,18 +48,57 @@ class Worker:
         )
 
     async def write(self, command: str) -> int:
+        """
+        Enqueue a write operation.
+
+        :param command: SCPI command string to send to the instrument.
+        :type command: str
+
+        :return: Number of bytes written.
+        :rtype: int
+
+        :raises ClientConnectionError: If the worker is not started, is
+            closing, or is already closed.
+        """
         result = await self._submit(OperationType.WRITE, command)
         return int(result)
 
     async def read(self) -> str:
+        """
+        Enqueue a read operation.
+
+        :return: Response read from the instrument.
+        :rtype: str
+
+        :raises ClientConnectionError: If the worker is not started, is
+            closing, or is already closed.
+        """
         result = await self._submit(OperationType.READ, None)
         return str(result)
 
     async def query(self, command: str) -> str:
+        """
+        Enqueue a query operation.
+
+        :param command: SCPI query string to send to the instrument.
+        :type command: str
+
+        :return: Response read from the instrument.
+        :rtype: str
+
+        :raises ClientConnectionError: If the worker is not started, is
+            closing, or is already closed.
+        """
         result = await self._submit(OperationType.QUERY, command)
         return str(result)
 
     async def close(self):
+        """
+        Stop the worker and close the instrument.
+
+        Enqueues a close operation, waits for the background task to finish,
+        and marks the worker as closed.
+        """
         if self._closed or self._closing:
             return
 
