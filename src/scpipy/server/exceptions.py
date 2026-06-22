@@ -1,14 +1,14 @@
 class ConfigureException(Exception):
-    pass
+    """Raised when the server configuration is invalid."""
 
 
 class AlreadyStarted(Exception):
-    pass
+    """Raised when an operation tries to start an already running server."""
 
 
 class LogicException(Exception):
-    pass
+    """Raised when the internal server state is inconsistent."""
 
 
 class RouteNotFound(Exception):
-    pass
+    """Raised when no route matches the requested SCPI command."""
