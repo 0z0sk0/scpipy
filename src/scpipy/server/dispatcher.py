@@ -1,8 +1,13 @@
 import asyncio
 
-from scpipy.server.exceptions import RouteNotFound
+from scpipy.server.exceptions import (
+    RouteNotFound,
+    ArgumentBindingError,
+    ParserSyntaxError,
+)
 from scpipy.server.routing import Router, Route
 from scpipy.server.context import Context
+from scpipy.server.exception_handler import ExceptionHandler
 
 from scpipy.shared.parser import Parser, ParseError
 from scpipy.shared.ast import Command, Node
@@ -22,9 +27,15 @@ class Dispatcher:
     :type terminator: str
     """
 
-    def __init__(self, router: Router, terminator: str):
+    def __init__(
+        self,
+        router: Router,
+        terminator: str,
+        exception_handler: ExceptionHandler | None = None,
+    ) -> None:
         self._router = router
         self._terminator = terminator
+        self._exception_handlers = exception_handler or ExceptionHandler()
 
         self._parser = Parser()
 
@@ -34,7 +45,11 @@ class Dispatcher:
         try:
             commands = self._parser.parse(line)
         except ParseError:
-            raise ScpiException(DefaultScpiErrors.SYNTAX_ERROR.value)
+            raise ScpiException(
+                self._exception_handlers.resolve(
+                    ParserSyntaxError, context, None
+                )
+            )
 
         responses = []
 
@@ -54,23 +69,24 @@ class Dispatcher:
     ) -> str | None:
         try:
             route, bindings = self._route(command)
-        except RouteNotFound:
-            raise ScpiException(DefaultScpiErrors.COMMAND_HEADER_ERROR.value)
+            positional_args = [arg.value for arg in command.args]
 
-        positional_args = [arg.value for arg in command.args]
+            try:
+                result = route.handler(context, *positional_args, **bindings)
+            except TypeError:
+                raise ArgumentBindingError
 
-        try:
-            result = route.handler(context, *positional_args, **bindings)
-        except TypeError:
-            raise ScpiException(DefaultScpiErrors.DATA_TYPE_ERROR.value)
+            if asyncio.iscoroutine(result):
+                result = await result
 
-        if asyncio.iscoroutine(result):
-            result = await result
+            if result is None:
+                return None
 
-        if result is None:
-            return None
-
-        return str(result)
+            return str(result)
+        except Exception as exc:
+            raise ScpiException(
+                self._exception_handlers.resolve(exc, context, command)
+            )
 
     def _route(self, command: Command) -> tuple[Route, dict[str, str]]:
         for route in self._router.routes.values():
