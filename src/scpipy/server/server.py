@@ -13,6 +13,30 @@ from scpipy.shared.errors import ScpiException
 
 
 class Server:
+    """
+    SCPI server.
+
+    Accept client connection, dispatches incoming SCPI commands through the
+    configured router, and manages server lifecycle events.
+
+    :param host: Host address to bind the server to.
+    :type host: str
+    :param port: TCP port to bind the server to.
+    :type port: int
+    :param terminator: Line terminator appended to outgoing responses and used
+        by the dispatcher.
+    :type terminator: str
+    :param error_queue_size: Maximum number of errors stored in each context
+        error queue.
+    :type error_queue_size: int
+    :param shared_context: If ``True``, all clients share the same execution
+        context. If ``False``, a new context is created per client.
+    :type shared_context: bool
+    :param lifespan: Optional lifespan handler used for startup and shutdown
+        logic.
+    :type lifespan: Any
+    """
+
     def __init__(
         self,
         host: str,
@@ -45,12 +69,30 @@ class Server:
 
     @property
     def state(self) -> dict:
+        """
+        Return the shared lifespan state dictionary.
+
+        :return: Mutable state dictionary managed by the lifespan manager.
+        :rtype: dict
+        """
         return self._lifespan_manager.state
 
     def include_router(self, routers: Router | Iterable[Router]):
+        """
+        Include one or more routers in the server router.
+
+        :param routers: Router instance or iterable of routers to include.
+        :type routers: Router | Iterable[Router]
+        """
         self._router.include_router(routers)
 
     def run(self):
+        """
+        Start the server and block until it is stopped.
+
+        :raises ConfigureException: If the host or port is not configured.
+        :raises AlreadyStarted: If the server is already running.
+        """
         if self._host is None or self._port is None:
             raise exceptions.ConfigureException(
                 'Host or port was not configured'
@@ -63,6 +105,11 @@ class Server:
         asyncio.run(self._listen())
 
     def stop(self):
+        """
+        Request server shutdown.
+
+        Signals the internal stop event and causes the listening loop to exit.
+        """
         self._stop_event.set()
 
     async def _listen(self):
