@@ -2,7 +2,6 @@ import asyncio
 
 from scpipy.server.exceptions import (
     RouteNotFound,
-    ArgumentBindingError,
     ParserSyntaxError,
 )
 from scpipy.server.routing import Router, Route
@@ -11,7 +10,7 @@ from scpipy.server.exception_handler import ExceptionHandler
 
 from scpipy.shared.parser import Parser, ParseError
 from scpipy.shared.ast import Command, Node
-from scpipy.shared.errors import ScpiException, DefaultScpiErrors
+from scpipy.shared.errors import ScpiException
 
 
 class Dispatcher:
@@ -71,10 +70,7 @@ class Dispatcher:
             route, bindings = self._route(command)
             positional_args = [arg.value for arg in command.args]
 
-            try:
-                result = route.handler(context, *positional_args, **bindings)
-            except TypeError:
-                raise ArgumentBindingError
+            result = route.invoke(context, *positional_args, **bindings)
 
             if asyncio.iscoroutine(result):
                 result = await result

@@ -3,6 +3,7 @@ import dataclasses
 from collections.abc import Callable, Iterable
 
 from scpipy.server.exceptions import RouteNotFound
+from scpipy.server.route_handler import RouteHandler
 
 from scpipy.shared.parser import Parser
 from scpipy.shared.ast import Command
@@ -14,6 +15,7 @@ class Route:
     handler: Callable
 
     pattern: Command = dataclasses.field(init=False)
+    _binding: RouteHandler = dataclasses.field(init=False, repr=False)
 
     def __post_init__(self):
         parser = Parser()
@@ -23,6 +25,14 @@ class Route:
             raise ValueError('Route must contain exactly one command')
 
         self.pattern = commands[0]
+        self._binding = RouteHandler(
+            handler=self.handler,
+            pattern=self.pattern,
+        )
+
+    def invoke(self, context, *positional_args, **bindings):
+        """Validate and dispatch the route handler call."""
+        return self._binding.invoke(context, *positional_args, **bindings)
 
 
 class Router:

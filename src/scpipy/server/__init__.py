@@ -7,5 +7,7 @@ from scpipy.server.exceptions import (
     LogicException,
     RouteNotFound,
     DispatcherError,
-    ArgumentBindingError,
+    MissingPositionalArgsError,
+    UnexpectedPositionalArgsError,
+    UnexpectedKeywordArgsError,
 )
