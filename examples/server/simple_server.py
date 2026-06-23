@@ -11,9 +11,11 @@ def syst_ready_handler(context: Context):
     return '1'
 
 
-@router.register('SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude]')
-def source_handler(context: Context, value: float, channel: int, some: int):
-    return f'{channel}:{some}:{value}'
+@router.register(
+    'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <value>'
+)
+def source_handler(context: Context, channel: int, some: int, value: int):
+    return f'{channel}:{some} {value}'
 
 
 if __name__ == '__main__':
