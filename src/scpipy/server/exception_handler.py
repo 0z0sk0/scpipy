@@ -3,8 +3,10 @@ from collections.abc import Callable
 from scpipy.server.context import Context
 from scpipy.server.exceptions import (
     RouteNotFound,
-    ArgumentBindingError,
     ParserSyntaxError,
+    MissingPositionalArgsError,
+    UnexpectedPositionalArgsError,
+    UnexpectedKeywordArgsError,
 )
 
 from scpipy.shared.ast import Command
@@ -30,8 +32,14 @@ class ExceptionHandler:
         self._handlers[ScpiException] = self._handle_scpi_exception
         self._handlers[ParserSyntaxError] = self._handle_parse_error
         self._handlers[RouteNotFound] = self._handle_route_not_found
-        self._handlers[ArgumentBindingError] = (
-            self._handle_argument_binding_error
+        self._handlers[MissingPositionalArgsError] = (
+            self._handle_missed_argument_error
+        )
+        self._handlers[UnexpectedPositionalArgsError] = (
+            self._handle_unexpected_argument_error
+        )
+        self._handlers[UnexpectedKeywordArgsError] = (
+            self._handle_unexpected_argument_error
         )
 
     def add_exception_handler(
@@ -128,9 +136,17 @@ class ExceptionHandler:
         return DefaultScpiErrors.COMMAND_HEADER_ERROR.value
 
     @staticmethod
-    def _handle_argument_binding_error(
+    def _handle_missed_argument_error(
         exc: Exception,
         context: Context,
         command: Command | None,
     ) -> ScpiError:
-        return DefaultScpiErrors.DATA_TYPE_ERROR.value
+        return DefaultScpiErrors.MISSING_PARAMETER.value
+
+    @staticmethod
+    def _handle_unexpected_argument_error(
+        exc: Exception,
+        context: Context,
+        command: Command | None,
+    ) -> ScpiError:
+        return DefaultScpiErrors.PARAMETER_NOT_ALLOWED.value

@@ -28,6 +28,8 @@ class DefaultScpiErrors(enum.Enum):
     NO_ERROR = ScpiError(0, 'No error')
     SYNTAX_ERROR = ScpiError(-102, 'Syntax error')
     DATA_TYPE_ERROR = ScpiError(-104, 'Data type error')
+    PARAMETER_NOT_ALLOWED = ScpiError(-108, 'Parameter not allowed')
+    MISSING_PARAMETER = ScpiError(-109, 'Missing parameter')
     COMMAND_HEADER_ERROR = ScpiError(-110, 'Command header error')
     QUEUE_OVERFLOW = ScpiError(-350, 'Queue overflow')
 
