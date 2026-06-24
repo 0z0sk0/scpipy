@@ -47,63 +47,38 @@ class RouteHandler:
         self._user_defined_args = handler_args[1:]
         self._validate_handler()
 
-    def _validate_handler(self):
-        node_pattern_args_count = sum(
+    def _get_dummy_arg_count(self) -> int:
+        pattern_arg_count = sum(
             1
             for node in self.pattern.nodes
             if node.arg is not None and node.arg.pattern
         )
+        command_arg_count = len(self.pattern.args)
+        return pattern_arg_count + command_arg_count
 
-        command_args_count = len(self.pattern.args)
-        total_pos_count = node_pattern_args_count + command_args_count
-
+    def _validate_handler(self):
         try:
-            dummy_pos = (None,) * total_pos_count
-            dummy_kw = {}
-
-            args, kwargs = self._build_call_args(None, dummy_pos, dummy_kw)
+            dummy_args = (None,) * self._get_dummy_arg_count()
+            args, kwargs = self._build_call_args(None, dummy_args, {})
             self._signature.bind(*args, **kwargs)
-        except TypeError as e:
+        except TypeError as exc:
             raise PatternMismatchError(
-                f'Handler signature mismatch with pattern: {e}'
-            ) from e
+                f'Handler signature mismatch with pattern: {exc}'
+            )
 
     def _build_call_args(
         self, context, args: tuple, kwargs: dict
     ) -> tuple[list, dict]:
-        # Context always first arg
         out_args = [context]
         out_kwargs = {}
-
-        # TODO: debug logging
-        print('Pattern:', self.pattern)
-        print('Signature:', self._signature)
-        print('Call args:', args)
-        print('Call kwargs:', kwargs)
 
         handler_remaining_args = list(args)
         handler_remaining_kwargs = dict(kwargs)
 
         for handler_arg in self._user_defined_args:
-            # TODO: debug logging
-            print(f'Handler arg: "{handler_arg}"')
-            print('Kind:', handler_arg.kind)
-            print('Handler remaining args:', handler_remaining_args)
-            print('Handler remaining kwargs:', handler_remaining_kwargs)
-
             if handler_arg.kind is inspect.Parameter.POSITIONAL_ONLY:
-                # f(context, 'some_value')
-                #            ^^^^^^^^^^^^
-                #
-                # Positional arg, not variable of count.
-
-                # TODO: debug logging
-                print(
-                    'This is a positional arg, positional args are remaining?'
-                )
                 if handler_remaining_args:
-                    first_handler_remaining_arg = handler_remaining_args.pop(0)
-                    out_args.append(first_handler_remaining_arg)
+                    out_args.append(handler_remaining_args.pop(0))
 
                 else:
                     raise MissingPositionalArgsError(
@@ -111,31 +86,13 @@ class RouteHandler:
                     )
 
             elif handler_arg.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD:
-                # f(context, 'some_value', 'another_value')
-                #            ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
-                #
-                # f(context, some=1, other=2)
-                #            ^^^^^^  ^^^^^^^
-                #
-                # Combined positional and keyword arg, which can be passed with keyword or positional alone.
-
-                # TODO: debug logging
-                print(
-                    'Its positional or keyword arg, positional or keyword args remaining?'
-                )
                 if handler_arg.name in handler_remaining_kwargs:
-                    # TODO: debug logging
-                    print('Keyword args remaining, take by name')
-                    value = handler_remaining_kwargs.pop(handler_arg.name)
-                    out_args.append(value)
+                    out_args.append(
+                        handler_remaining_kwargs.pop(handler_arg.name)
+                    )
 
                 elif handler_remaining_args:
-                    # TODO: debug logging
-                    print('Positional args remaining, take first')
-                    first_handler_remaining_arg_value = (
-                        handler_remaining_args.pop(0)
-                    )
-                    out_args.append(first_handler_remaining_arg_value)
+                    out_args.append(handler_remaining_args.pop(0))
 
                 elif handler_arg.default is inspect._empty:
                     raise MissingPositionalArgsError(
@@ -143,31 +100,14 @@ class RouteHandler:
                     )
 
             elif handler_arg.kind is inspect.Parameter.VAR_POSITIONAL:
-                # f(context, *args)
-                #            ^^^^^^
-                #
-                # Variable positional args, takes all remaining args inside.
-
-                # TODO: debug logging
-                print(
-                    'Its variable positional arg, take all remaining positional args'
-                )
                 out_args.extend(handler_remaining_args)
                 handler_remaining_args.clear()
 
             elif handler_arg.kind is inspect.Parameter.KEYWORD_ONLY:
-                # f(context, *, some=1)
-                #               ^^^^^^
-                #
-                # Keyword arg, which can be passed only with keyword.
-
-                # TODO: debug logging
-                print('Its keyword arg, arg in keyword args?')
                 if handler_arg.name in handler_remaining_kwargs:
-                    # TODO: debug logging
-                    print('Arg in keyword args, take by name')
-                    value = handler_remaining_kwargs.pop(handler_arg.name)
-                    out_kwargs[handler_arg.name] = value
+                    out_kwargs[handler_arg.name] = (
+                        handler_remaining_kwargs.pop(handler_arg.name)
+                    )
 
                 elif handler_arg.default is inspect._empty:
                     raise MissingKeywordArgsError(
@@ -175,24 +115,14 @@ class RouteHandler:
                     )
 
             elif handler_arg.kind is inspect.Parameter.VAR_KEYWORD:
-                # f(context, **extra)
-                #            ^^^^^^^
-                #
-                # Variable keyword args, which can be passed only with keyword for each arg.
-                # TODO: debug logging
-                print(
-                    'Its variable keyword arg, take all remaining keyword args'
-                )
                 out_kwargs.update(handler_remaining_kwargs)
                 handler_remaining_kwargs.clear()
 
-        # If handler still has positional args, raise an exception.
         if handler_remaining_args:
             raise UnexpectedPositionalArgsError(
                 f'too many positional arguments: {tuple(handler_remaining_args)!r}'
             )
 
-        # If handler still has named args, raise an exception.
         if handler_remaining_kwargs:
             unexpected = ', '.join(sorted(handler_remaining_kwargs))
             raise UnexpectedKeywordArgsError(
@@ -219,12 +149,12 @@ class RouteHandler:
         except TypeError as e:
             msg = str(e)
             if 'missing' in msg:
-                raise MissingPositionalArgsError(msg) from e
+                raise MissingPositionalArgsError(msg)
             if 'positional argument' in msg:
-                raise UnexpectedPositionalArgsError(msg) from e
+                raise UnexpectedPositionalArgsError(msg)
             if 'keyword argument' in msg:
-                raise UnexpectedKeywordArgsError(msg) from e
-            raise InvalidHandlerError(msg) from e
+                raise UnexpectedKeywordArgsError(msg)
+            raise InvalidHandlerError(msg)
 
     def invoke(self, context, *args, **kwargs):
         """Validate the call and invoke the wrapped handler."""
