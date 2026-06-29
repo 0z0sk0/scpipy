@@ -25,6 +25,7 @@ class RouteHandler:
     _user_defined_args: tuple[inspect.Parameter, ...] = dataclasses.field(
         init=False
     )
+    _pattern_node_arg_names: tuple[str, ...] = dataclasses.field(init=False)
 
     def __post_init__(self):
         self._signature = inspect.signature(self.handler)
@@ -45,21 +46,28 @@ class RouteHandler:
             )
 
         self._user_defined_args = handler_args[1:]
+        self._pattern_node_arg_names = self._collect_pattern_node_arg_names()
         self._validate_handler()
 
-    def _get_dummy_arg_count(self) -> int:
-        pattern_arg_count = sum(
-            1
+    def _collect_pattern_node_arg_names(self) -> tuple[str, ...]:
+        return tuple(
+            node.arg.value
             for node in self.pattern.nodes
             if node.arg is not None and node.arg.pattern
         )
-        command_arg_count = len(self.pattern.args)
-        return pattern_arg_count + command_arg_count
+
+    def _get_dummy_arg_count(self) -> int:
+        return len(self.pattern.args)
 
     def _validate_handler(self):
         try:
             dummy_args = (None,) * self._get_dummy_arg_count()
-            args, kwargs = self._build_call_args(None, dummy_args, {})
+            dummy_kwargs = {
+                name: None for name in self._pattern_node_arg_names
+            }
+            args, kwargs = self._build_call_args(
+                None, dummy_args, dummy_kwargs
+            )
             self._signature.bind(*args, **kwargs)
         except TypeError as exc:
             raise PatternMismatchError(
@@ -94,7 +102,7 @@ class RouteHandler:
                 elif handler_remaining_args:
                     out_args.append(handler_remaining_args.pop(0))
 
-                elif handler_arg.default is inspect._empty:
+                elif handler_arg.default is inspect.Parameter.empty:
                     raise MissingPositionalArgsError(
                         f'missing required positional argument: {handler_arg.name}'
                     )
@@ -109,7 +117,7 @@ class RouteHandler:
                         handler_remaining_kwargs.pop(handler_arg.name)
                     )
 
-                elif handler_arg.default is inspect._empty:
+                elif handler_arg.default is inspect.Parameter.empty:
                     raise MissingKeywordArgsError(
                         f'missing required keyword argument: {handler_arg.name}'
                     )

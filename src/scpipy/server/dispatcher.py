@@ -119,7 +119,9 @@ class Dispatcher:
             if matched is not None:
                 bindings.update(matched)
                 node_index += 1
-            elif not pattern_node.optional:
+            elif pattern_node.optional:
+                continue
+            else:
                 return None
 
         if node_index != len(nodes):
@@ -136,12 +138,16 @@ class Dispatcher:
         pattern_arg = pattern.arg.value if pattern.arg is not None else None
 
         if pattern_arg is None:
-            return {} if node_arg is None else None
+            result = {} if node_arg is None else None
+            return result
+
+        if pattern.arg.pattern:
+            if node_arg is None:
+                return {}
+
+            return {pattern_arg: node_arg}
 
         if node_arg is None:
             return None
-
-        if pattern.arg.pattern:
-            return {pattern_arg: node_arg}
 
         return {} if node_arg == pattern_arg else None
