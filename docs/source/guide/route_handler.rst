@@ -27,14 +27,15 @@ A handler always receives ``context`` as its first argument.
 
 Example::
 
-   @router.register('SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>')
-   def source_handler(context, channel, some, *values):
-       return channel, some, values
+   @router.register('SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <value>')
+   def source_handler(context, value, *, channel=1, some=7):
+        return channel, some, value
 
 Rules:
 
 - ``context`` is always the first argument.
-- Pattern values are matched from left to right.
+- Node placeholders are extracted from SCPI nodes and passed as keyword arguments by name.
+- If a node placeholder is not present in the incoming command, it is not passed to the handler; Python default values are then applied during binding.
 - Named pattern values are passed by name.
 - ``*values`` receives any remaining positional values.
 - ``**kwargs`` receives any remaining keyword values.
@@ -47,7 +48,8 @@ which values are available to the handler.
 
 The following parts are matched:
 
-- node placeholders such as ``<channel>`` and ``<some>``;
+- node placeholders such as <channel> and <some> may be absent in the command; when absent, they are simply not included in the call;
+- if the handler declares a default for that parameter, the default will be used.
 - trailing command arguments such as ``<values>``;
 - optional command sections, which may or may not be present.
 
@@ -60,9 +62,10 @@ Example::
 
 This pattern can match commands such as:
 
-- ``SOURce1:POWer2 10 20 30``
+- ``SOURce:POWer 10``
+- ``SOURce1:POWer2 10,20,30``
 - ``SOURce1:POWer2:LEVel 10``
-- ``SOURce1:POWer2:LEVel:IMMediate 10 20``
+- ``SOURce1:POWer2:LEVel:IMMediate 10,20``
 
 Error handling
 --------------
@@ -114,9 +117,9 @@ Keep handlers small and explicit.
 
 Good::
 
-   @router.register('SOURce<channel>:POWer<some> <values>')
-   def set_power(context, channel, some, *values):
-       ...
+    @router.register('SOURce<channel>:POWer<some> <values>')
+    def set_power(context, *values, channel=1, some=1):
+        ...
 
 Avoid handlers that require arguments not represented by the SCPI pattern.
 
