@@ -3,7 +3,7 @@ import pytest
 from scpipy.server.exceptions import (
     InvalidHandlerError,
     MissingKeywordArgsError,
-    UnexpectedPositionalArgsError,
+    UnexpectedKeywordArgsError,
 )
 from scpipy.server.route_handler import RouteHandler
 
@@ -30,12 +30,13 @@ def test_init_rejects_invalid_context_kind(simple_pattern):
         RouteHandler(handler=handler, pattern=simple_pattern)
 
 
-def test_init_raises_unexpected_positional_args(simple_pattern):
+def test_init_raises_unexpected_keyword_args(simple_pattern):
     def handler(context, channel: int):
         return channel
 
     with pytest.raises(
-        UnexpectedPositionalArgsError, match='too many positional arguments'
+        UnexpectedKeywordArgsError,
+        match='got unexpected keyword arguments: some',
     ):
         RouteHandler(handler=handler, pattern=simple_pattern)
 
