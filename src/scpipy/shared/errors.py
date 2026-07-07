@@ -56,7 +56,12 @@ class ErrorQueue:
     """
 
     def __init__(self, max_size: int):
-        self.__queue = collections.deque(maxlen=max_size)
+        if max_size <= 0:
+            raise ValueError('max_size must be > 0')
+
+        self.__queue: collections.deque[ScpiError] = collections.deque(
+            maxlen=max_size
+        )
 
     def get(self) -> str:
         """
@@ -64,7 +69,7 @@ class ErrorQueue:
 
         If the queue is empty, returns ``0,"No error"``.
 
-        :return: Next SCPI error string from the queue.
+        :return: String representation of next SCPI-error from the queue.
         :rtype: str
         """
         if not self.__queue:
@@ -76,18 +81,21 @@ class ErrorQueue:
         """
         Add an error to the queue.
 
-        If the queue is full, the most recent queued error is replaced with
+        If the queue is full, the last queued error is replaced with
         ``QUEUE_OVERFLOW``.
 
         :param item: SCPI error to add to the queue.
         :type item: ScpiError
         """
-        if len(self.__queue) == self.__queue.maxlen:
-            self.__queue.pop()
-            self.__queue.append(DefaultScpiErrors.QUEUE_OVERFLOW.value)
+        if len(self.__queue) < self.__queue.maxlen:
+            self.__queue.append(item)
             return
 
-        self.__queue.append(item)
+        if self.__queue[-1] == DefaultScpiErrors.QUEUE_OVERFLOW.value:
+            return
+
+        self.__queue.pop()
+        self.__queue.append(DefaultScpiErrors.QUEUE_OVERFLOW.value)
 
     def clear(self):
         """
