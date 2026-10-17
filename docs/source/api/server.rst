@@ -27,3 +27,8 @@ The server package provides helpers for SCPI instruments and routing.
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. automodule:: scpipy.server.exception_handler
+   :members:
+   :undoc-members:
+   :show-inheritance:
