@@ -87,7 +87,7 @@ async def test_include_router_and_custom_exception_handler(
     def fail(context):
         raise ValueError('custom')
 
-    router.add_route('*OPC?', fail)
+    router.add_route('USER?', fail)
     server.include_router([router])
 
     @server.add_exception_handler(ValueError)
@@ -95,7 +95,7 @@ async def test_include_router_and_custom_exception_handler(
         return ScpiError(-222, 'custom')
 
     reader, writer = streams
-    reader.readline.side_effect = [b'*OPC?\n', b'SYST:ERR?\n', b'']
+    reader.readline.side_effect = [b'USER?\n', b'SYST:ERR?\n', b'']
     await server._handle_client(reader, writer)
     writer.write.assert_called_once_with(b'-222,"custom"\n')
 

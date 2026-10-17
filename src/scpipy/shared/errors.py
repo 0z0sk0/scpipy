@@ -1,6 +1,7 @@
 import collections
 import dataclasses
 import enum
+from collections.abc import Callable
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -32,6 +33,7 @@ class DefaultScpiErrors(enum.Enum):
     MISSING_PARAMETER = ScpiError(-109, 'Missing parameter')
     COMMAND_HEADER_ERROR = ScpiError(-110, 'Command header error')
     QUEUE_OVERFLOW = ScpiError(-350, 'Queue overflow')
+    DATA_OUT_OF_RANGE = ScpiError(-222, 'Data out of range')
 
 
 class ScpiException(Exception):
@@ -53,12 +55,20 @@ class ErrorQueue:
 
     :param max_size: Maximum number of errors stored in the queue.
     :type max_size: int
+    :param on_change: Observer. Receives an inserted/detected error,
+    :type on_change: Callable[[ScpiError | None], None] | None
     """
 
-    def __init__(self, max_size: int):
+    def __init__(
+        self,
+        max_size: int,
+        *,
+        on_change: Callable[[ScpiError | None], None] | None = None,
+    ):
         if max_size <= 0:
             raise ValueError('max_size must be > 0')
 
+        self._on_change = on_change
         self.__queue: collections.deque[ScpiError] = collections.deque(
             maxlen=max_size,
         )
@@ -75,7 +85,9 @@ class ErrorQueue:
         if not self.__queue:
             return str(DefaultScpiErrors.NO_ERROR.value)
 
-        return str(self.__queue.popleft())
+        error = self.__queue.popleft()
+        self._notify(None)
+        return str(error)
 
     def put(self, item: ScpiError):
         """
@@ -89,16 +101,28 @@ class ErrorQueue:
         """
         if len(self.__queue) < self.__queue.maxlen:
             self.__queue.append(item)
+            self._notify(item)
             return
 
         if self.__queue[-1] == DefaultScpiErrors.QUEUE_OVERFLOW.value:
+            self._notify(item)
             return
 
         self.__queue.pop()
         self.__queue.append(DefaultScpiErrors.QUEUE_OVERFLOW.value)
+        self._notify(item)
+        self._notify(DefaultScpiErrors.QUEUE_OVERFLOW.value)
 
     def clear(self):
         """
         Remove all errors from the queue.
         """
         self.__queue.clear()
+        self._notify(None)
+
+    def __len__(self) -> int:
+        return len(self.__queue)
+
+    def _notify(self, error: ScpiError | None) -> None:
+        if self._on_change is not None:
+            self._on_change(error)

@@ -55,7 +55,8 @@ class Server:
         self._client_tasks: set[asyncio.Task] = set()
         self._client_writers: set[asyncio.StreamWriter] = set()
 
-        self._router = builtin_router
+        self._router = Router()
+        self._router.include_router(builtin_router)
         self._exception_handler = ExceptionHandler()
         self._dispatcher = dispatcher.Dispatcher(
             self._router,
@@ -175,8 +176,9 @@ class Server:
                     continue
 
                 if response:
-                    writer.write(response)
-                    await writer.drain()
+                    with context.status.response_pending():
+                        writer.write(response)
+                        await writer.drain()
 
         except asyncio.CancelledError:
             raise

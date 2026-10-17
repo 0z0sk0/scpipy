@@ -21,6 +21,7 @@ to test instruments (via PyVISA) and for building SCPI servers.
    guide/lifespan
    guide/custom_exception_handler
    guide/route_handler
+   guide/status_registers
 
 .. toctree::
    :maxdepth: 2
