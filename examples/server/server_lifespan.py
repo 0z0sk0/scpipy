@@ -1,7 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from scpipy.server import Server, Router, Context
+from scpipy.server import Context, Router, Server
 
 HOST = '127.0.0.1'
 PORT = 5025

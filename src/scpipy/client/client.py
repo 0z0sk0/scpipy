@@ -1,7 +1,7 @@
 import asyncio
 import contextlib
-import pyvisa
 
+import pyvisa
 
 from scpipy.client.exceptions import ClientConnectionError
 from scpipy.client.worker import Worker
@@ -83,7 +83,8 @@ class Client:
         try:
             if self._backend:
                 self._rm = await asyncio.to_thread(
-                    pyvisa.ResourceManager, self._backend
+                    pyvisa.ResourceManager,
+                    self._backend,
                 )
             else:
                 self._rm = await asyncio.to_thread(pyvisa.ResourceManager)
@@ -102,7 +103,8 @@ class Client:
             self._instrument.encoding = self._encoding
 
             self._worker = Worker(
-                self._instrument, queue_size=self._queue_size
+                self._instrument,
+                queue_size=self._queue_size,
             )
             self._worker.start()
             self._started = True
@@ -110,7 +112,7 @@ class Client:
         except pyvisa.errors.VisaIOError as exc:
             await self._cleanup_connect_error()
             raise ClientConnectionError(
-                f'Failed to connect to {self._resource}: {exc}'
+                f'Failed to connect to {self._resource}: {exc}',
             ) from exc
         except Exception:
             await self._cleanup_connect_error()

@@ -2,18 +2,17 @@ from collections.abc import Callable
 
 from scpipy.server.context import Context
 from scpipy.server.exceptions import (
-    RouteNotFound,
-    ParserSyntaxError,
     MissingPositionalArgsError,
-    UnexpectedPositionalArgsError,
+    ParserSyntaxError,
+    RouteNotFound,
     UnexpectedKeywordArgsError,
+    UnexpectedPositionalArgsError,
 )
-
 from scpipy.shared.ast import Command
 from scpipy.shared.errors import (
+    DefaultScpiErrors,
     ScpiError,
     ScpiException,
-    DefaultScpiErrors,
 )
 
 ExceptionHandler = Callable[[Exception, Context, Command | None], ScpiError]

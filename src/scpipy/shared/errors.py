@@ -60,7 +60,7 @@ class ErrorQueue:
             raise ValueError('max_size must be > 0')
 
         self.__queue: collections.deque[ScpiError] = collections.deque(
-            maxlen=max_size
+            maxlen=max_size,
         )
 
     def get(self) -> str:

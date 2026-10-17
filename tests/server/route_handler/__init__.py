@@ -2,9 +2,9 @@ import pytest
 
 from scpipy.server.exceptions import (
     InvalidHandlerError,
-    PatternMismatchError,
-    MissingPositionalArgsError,
     MissingKeywordArgsError,
+    MissingPositionalArgsError,
+    PatternMismatchError,
     UnexpectedKeywordArgsError,
 )
 from scpipy.server.route_handler import RouteHandler
@@ -17,7 +17,7 @@ def make_pattern(command: str):
 
 def test_validate_call_with_variadic_values():
     pattern = make_pattern(
-        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>'
+        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>',
     )
 
     def handler(context, channel: int, some: int, *values):
@@ -38,7 +38,7 @@ def test_validate_call_with_variadic_values():
 
 def test_invoke_with_variadic_values():
     pattern = make_pattern(
-        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>'
+        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>',
     )
 
     def handler(context, channel: int, some: int, *values):
@@ -61,7 +61,7 @@ def test_invoke_with_variadic_values():
 
 def test_missing_context_raises():
     pattern = make_pattern(
-        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>'
+        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>',
     )
 
     def handler(context, channel: int, some: int, *values):

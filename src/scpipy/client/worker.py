@@ -1,9 +1,10 @@
 import asyncio
 import contextlib
+
 import pyvisa
 
 from scpipy.client.exceptions import ClientConnectionError, ClientStopped
-from scpipy.client.models import QueueItem, OperationType
+from scpipy.client.models import OperationType, QueueItem
 
 
 class Worker:
@@ -29,7 +30,7 @@ class Worker:
     ):
         self._instrument = instrument
         self._queue: asyncio.Queue[QueueItem] = asyncio.Queue(
-            maxsize=queue_size
+            maxsize=queue_size,
         )
         self._task: asyncio.Task[None] | None = None
         self._closing = False
@@ -44,7 +45,8 @@ class Worker:
         if self._task is not None:
             return
         self._task = asyncio.create_task(
-            self._run(), name='scpipy-client-worker'
+            self._run(),
+            name='scpipy-client-worker',
         )
 
     async def write(self, command: str) -> int:
@@ -169,12 +171,13 @@ class Worker:
             self._closed = True
 
     async def _execute_item(self, item: QueueItem) -> int | str:
-        match (item.type):
+        match item.type:
             case OperationType.WRITE:
                 if item.value is None:
                     raise ValueError('Write operation requires command')
                 return await asyncio.to_thread(
-                    self._instrument.write, item.value
+                    self._instrument.write,
+                    item.value,
                 )
 
             case OperationType.READ:
@@ -184,7 +187,8 @@ class Worker:
                 if item.value is None:
                     raise ValueError('Query operation requires command')
                 return await asyncio.to_thread(
-                    self._instrument.query, item.value
+                    self._instrument.query,
+                    item.value,
                 )
 
             case _:

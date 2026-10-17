@@ -1,11 +1,11 @@
 from scpipy.server import (
-    Server,
-    Router,
-    Context,
     ArgumentBindingError,
+    Context,
     RouteNotFound,
+    Router,
+    Server,
 )
-from scpipy.shared.errors import ScpiError, ScpiException
+from scpipy.shared.errors import ScpiError
 
 HOST = '127.0.0.1'
 PORT = 5025

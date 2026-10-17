@@ -1,16 +1,14 @@
 import asyncio
-
 from collections.abc import Iterable
 
-from . import exceptions
-from . import dispatcher
-from scpipy.server.routing import Router
+from scpipy.server.builtin_router import builtin_router
 from scpipy.server.context import Context
 from scpipy.server.exception_handler import ExceptionHandler
-from scpipy.server.builtin_router import builtin_router
 from scpipy.server.lifespan_manager import LifespanManager
-
+from scpipy.server.routing import Router
 from scpipy.shared.errors import ScpiException
+
+from . import dispatcher, exceptions
 
 
 class Server:
@@ -60,7 +58,9 @@ class Server:
         self._router = builtin_router
         self._exception_handler = ExceptionHandler()
         self._dispatcher = dispatcher.Dispatcher(
-            self._router, terminator, exception_handler=self._exception_handler
+            self._router,
+            terminator,
+            exception_handler=self._exception_handler,
         )
 
         self._error_queue_size = error_queue_size
@@ -106,7 +106,7 @@ class Server:
         """
         if self._host is None or self._port is None:
             raise exceptions.ConfigureException(
-                'Host or port was not configured'
+                'Host or port was not configured',
             )
 
         if self._server is not None:
@@ -128,7 +128,9 @@ class Server:
 
         try:
             self._server = await asyncio.start_server(
-                self._handle_client, self._host, self._port
+                self._handle_client,
+                self._host,
+                self._port,
             )
 
             await self._wait_stop()
@@ -148,7 +150,9 @@ class Server:
         await self._stop_event.wait()
 
     async def _handle_client(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
     ):
         if self._dispatcher is None:
             raise exceptions.LogicException('Dispatcher was not configured')
@@ -180,14 +184,18 @@ class Server:
             await self._close_client(writer, task)
 
     def _init_client(
-        self, writer: asyncio.StreamWriter, task: asyncio.Task | None
+        self,
+        writer: asyncio.StreamWriter,
+        task: asyncio.Task | None,
     ):
         if task is not None:
             self._client_tasks.add(task)
         self._client_writers.add(writer)
 
     async def _close_client(
-        self, writer: asyncio.StreamWriter, task: asyncio.Task | None
+        self,
+        writer: asyncio.StreamWriter,
+        task: asyncio.Task | None,
     ):
         self._client_writers.discard(writer)
 
@@ -236,7 +244,8 @@ class Server:
 
     def _create_context(self) -> Context:
         return Context(
-            error_queue_size=self._error_queue_size, state=self.state
+            error_queue_size=self._error_queue_size,
+            state=self.state,
         )
 
     def _shared_context(self) -> bool:
