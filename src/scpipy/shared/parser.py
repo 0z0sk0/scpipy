@@ -42,9 +42,7 @@ class Parser:
         for command in self._split_block(line):
             parsed = self._parse_command(command, scope_nodes)
 
-            if parsed.common:
-                scope_nodes = []
-            else:
+            if not parsed.common:
                 scope_nodes = parsed.nodes[:-1]
 
             result.append(parsed)
@@ -189,8 +187,16 @@ class Parser:
         arg = cls._build_arg(arg, is_pattern) if arg is not None else None
 
         return Node(
-            short=format_scpi_short_keyword(keyword),
-            full=format_scpi_full_keyword(keyword),
+            short=(
+                keyword
+                if keyword.startswith('*')
+                else format_scpi_short_keyword(keyword)
+            ),
+            full=(
+                keyword
+                if keyword.startswith('*')
+                else format_scpi_full_keyword(keyword)
+            ),
             arg=arg,
             optional=optional,
         )
