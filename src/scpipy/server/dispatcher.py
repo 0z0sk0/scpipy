@@ -138,7 +138,7 @@ class Dispatcher:
 
     @staticmethod
     def _match_node(node: Node, pattern: Node) -> dict[str, str] | None:
-        if node.short != pattern.short:
+        if node.full.upper() not in (pattern.short, pattern.full.upper()):
             return None
 
         node_arg = node.arg.value if node.arg is not None else None
