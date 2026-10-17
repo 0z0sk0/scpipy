@@ -1,12 +1,12 @@
 from __future__ import annotations
+
 import dataclasses
 from collections.abc import Callable, Iterable
 
 from scpipy.server.exceptions import RouteNotFound
 from scpipy.server.route_handler import RouteHandler
-
-from scpipy.shared.parser import Parser
 from scpipy.shared.ast import Command
+from scpipy.shared.parser import Parser
 
 
 @dataclasses.dataclass

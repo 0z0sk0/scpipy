@@ -1,4 +1,4 @@
-from scpipy.server import Server, Router, Context
+from scpipy.server import Context, Router, Server
 
 HOST = '127.0.0.1'
 PORT = 5025
@@ -18,7 +18,11 @@ class ClassRouter:
         return '1'
 
     def source_handler(
-        self, context: Context, value: float, channel: int, some: int
+        self,
+        context: Context,
+        value: float,
+        channel: int,
+        some: int,
     ):
         return f'{channel}:{some}:{value}'
 

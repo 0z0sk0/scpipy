@@ -1,4 +1,4 @@
-from scpipy.server import Server, Router, Context
+from scpipy.server import Context, Router, Server
 
 HOST = '127.0.0.1'
 PORT = 5025
@@ -12,7 +12,7 @@ def syst_ready_handler(context: Context):
 
 
 @router.register(
-    'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <value>'
+    'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <value>',
 )
 def source_handler(context: Context, channel: int, some: int, value: int):
     return f'{channel}:{some} {value}'

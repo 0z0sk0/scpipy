@@ -56,7 +56,10 @@ def test_validate_call_applies_node_defaults(context, route, kwargs, expected):
     ],
 )
 def test_invoke_uses_default_node_values(
-    context, defaults_pattern, kwargs, expected
+    context,
+    defaults_pattern,
+    kwargs,
+    expected,
 ):
     def _handler(context, value, *, channel=1, some=7):
         return f'{channel},{some},{value}'
@@ -67,7 +70,8 @@ def test_invoke_uses_default_node_values(
 
 
 def test_default_node_values_work_with_keyword_only_params(
-    context, defaults_pattern
+    context,
+    defaults_pattern,
 ):
     def _handler(context, value, *, channel=11, some=22):
         return f'{channel},{some},{value}'

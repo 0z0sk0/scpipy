@@ -1,6 +1,6 @@
 import pytest
 
-from scpipy.shared.errors import ErrorQueue, DefaultScpiErrors
+from scpipy.shared.errors import DefaultScpiErrors, ErrorQueue
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def sample_errors():
 
     if len(candidates) < 3:
         pytest.skip(
-            'Need at least 3 SCPI errors without NO_ERROR and QUEUE_OVERFLOW'
+            'Need at least 3 SCPI errors without NO_ERROR and QUEUE_OVERFLOW',
         )
 
     return candidates[:3]

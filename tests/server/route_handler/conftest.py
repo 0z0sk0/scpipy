@@ -16,12 +16,12 @@ def simple_pattern(parser):
 @pytest.fixture
 def variadic_pattern(parser):
     return parser.parse(
-        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>'
+        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <values>',
     )[0]
 
 
 @pytest.fixture
 def defaults_pattern(parser):
     return parser.parse(
-        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <value>'
+        'SOURce<channel>:POWer<some>[:LEVel][:IMMediate][:AMPLitude] <value>',
     )[0]

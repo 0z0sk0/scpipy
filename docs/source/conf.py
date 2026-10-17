@@ -1,6 +1,6 @@
-from pathlib import Path
 import sys
 import tomllib
+from pathlib import Path
 
 DOC = Path(__file__).resolve().parents[1]
 ROOT = DOC.parent
@@ -9,7 +9,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 pyproject = tomllib.loads(
-    (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
+    (ROOT / 'pyproject.toml').read_text(encoding='utf-8'),
 )
 project_meta = pyproject['project']
 

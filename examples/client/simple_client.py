@@ -16,7 +16,7 @@ async def worker_task(client: Client, task_name: str, command: str):
     print(f'[{time.time()}] await {task_name}')
     response = await client.query(command)
     print(
-        f'[{time.time()}] {task_name} done -> {response}'
+        f'[{time.time()}] {task_name} done -> {response}',
     )
 
 
@@ -31,7 +31,11 @@ async def main():
                 'Sweep',
                 'INIT:CONT 0;:TRIG:SOUR BUS;:INIT;:TRIG:SING;:*OPC?',
             ),
-            worker_task(client, 'Intstrument start frequency', 'SENS:FREQ:STAR?'),
+            worker_task(
+                client,
+                'Intstrument start frequency',
+                'SENS:FREQ:STAR?',
+            ),
         )
 
         some_tasks_loop.cancel()

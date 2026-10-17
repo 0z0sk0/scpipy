@@ -6,11 +6,11 @@ from collections.abc import Callable
 
 from scpipy.server.exceptions import (
     InvalidHandlerError,
-    PatternMismatchError,
-    MissingPositionalArgsError,
     MissingKeywordArgsError,
-    UnexpectedPositionalArgsError,
+    MissingPositionalArgsError,
+    PatternMismatchError,
     UnexpectedKeywordArgsError,
+    UnexpectedPositionalArgsError,
 )
 from scpipy.shared.ast import Command
 
@@ -23,7 +23,7 @@ class RouteHandler:
     pattern: Command
     _signature: inspect.Signature = dataclasses.field(init=False)
     _user_defined_args: tuple[inspect.Parameter, ...] = dataclasses.field(
-        init=False
+        init=False,
     )
     _pattern_node_arg_names: tuple[str, ...] = dataclasses.field(init=False)
 
@@ -33,7 +33,7 @@ class RouteHandler:
 
         if not handler_args or handler_args[0].name != 'context':
             raise InvalidHandlerError(
-                'Handler must accept context as its first parameter.'
+                'Handler must accept context as its first parameter.',
             )
 
         if handler_args[0].kind in (
@@ -42,7 +42,7 @@ class RouteHandler:
             inspect.Parameter.VAR_KEYWORD,
         ):
             raise InvalidHandlerError(
-                'Handler context argument must be positional.'
+                'Handler context argument must be positional.',
             )
 
         self._user_defined_args = handler_args[1:]
@@ -62,20 +62,23 @@ class RouteHandler:
     def _validate_handler(self):
         try:
             dummy_args = (None,) * self._get_dummy_arg_count()
-            dummy_kwargs = {
-                name: None for name in self._pattern_node_arg_names
-            }
+            dummy_kwargs = dict.fromkeys(self._pattern_node_arg_names)
             args, kwargs = self._build_call_args(
-                None, dummy_args, dummy_kwargs
+                None,
+                dummy_args,
+                dummy_kwargs,
             )
             self._signature.bind(*args, **kwargs)
         except TypeError as exc:
             raise PatternMismatchError(
-                f'Handler signature mismatch with pattern: {exc}'
+                f'Handler signature mismatch with pattern: {exc}',
             )
 
     def _build_call_args(
-        self, context, args: tuple, kwargs: dict
+        self,
+        context,
+        args: tuple,
+        kwargs: dict,
     ) -> tuple[list, dict]:
         out_args = [context]
         out_kwargs = {}
@@ -90,13 +93,13 @@ class RouteHandler:
 
                 else:
                     raise MissingPositionalArgsError(
-                        f'missing required positional argument: {handler_arg.name}'
+                        f'missing required positional argument: {handler_arg.name}',
                     )
 
             elif handler_arg.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD:
                 if handler_arg.name in handler_remaining_kwargs:
                     out_args.append(
-                        handler_remaining_kwargs.pop(handler_arg.name)
+                        handler_remaining_kwargs.pop(handler_arg.name),
                     )
 
                 elif handler_remaining_args:
@@ -104,7 +107,7 @@ class RouteHandler:
 
                 elif handler_arg.default is inspect.Parameter.empty:
                     raise MissingPositionalArgsError(
-                        f'missing required positional argument: {handler_arg.name}'
+                        f'missing required positional argument: {handler_arg.name}',
                     )
 
             elif handler_arg.kind is inspect.Parameter.VAR_POSITIONAL:
@@ -119,7 +122,7 @@ class RouteHandler:
 
                 elif handler_arg.default is inspect.Parameter.empty:
                     raise MissingKeywordArgsError(
-                        f'missing required keyword argument: {handler_arg.name}'
+                        f'missing required keyword argument: {handler_arg.name}',
                     )
 
             elif handler_arg.kind is inspect.Parameter.VAR_KEYWORD:
@@ -128,13 +131,13 @@ class RouteHandler:
 
         if handler_remaining_args:
             raise UnexpectedPositionalArgsError(
-                f'too many positional arguments: {tuple(handler_remaining_args)!r}'
+                f'too many positional arguments: {tuple(handler_remaining_args)!r}',
             )
 
         if handler_remaining_kwargs:
             unexpected = ', '.join(sorted(handler_remaining_kwargs))
             raise UnexpectedKeywordArgsError(
-                f'got unexpected keyword arguments: {unexpected}'
+                f'got unexpected keyword arguments: {unexpected}',
             )
 
         return out_args, out_kwargs

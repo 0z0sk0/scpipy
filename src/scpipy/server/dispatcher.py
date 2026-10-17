@@ -1,16 +1,15 @@
 import asyncio
 
-from scpipy.server.exceptions import (
-    RouteNotFound,
-    ParserSyntaxError,
-)
-from scpipy.server.routing import Router, Route
 from scpipy.server.context import Context
 from scpipy.server.exception_handler import ExceptionHandler
-
-from scpipy.shared.parser import Parser, ParseError
+from scpipy.server.exceptions import (
+    ParserSyntaxError,
+    RouteNotFound,
+)
+from scpipy.server.routing import Route, Router
 from scpipy.shared.ast import Command, Node
 from scpipy.shared.errors import ScpiException
+from scpipy.shared.parser import ParseError, Parser
 
 
 class Dispatcher:
@@ -43,12 +42,14 @@ class Dispatcher:
 
         try:
             commands = self._parser.parse(line)
-        except ParseError:
+        except ParseError as exc:
             raise ScpiException(
                 self._exception_handlers.resolve(
-                    ParserSyntaxError(), context, None
-                )
-            )
+                    ParserSyntaxError(),
+                    context,
+                    None,
+                ),
+            ) from exc
 
         responses = []
 
@@ -64,7 +65,9 @@ class Dispatcher:
         return payload.encode()
 
     async def _dispatch_command(
-        self, context: Context, command: Command
+        self,
+        context: Context,
+        command: Command,
     ) -> str | None:
         try:
             route, bindings = self._route(command)
@@ -81,7 +84,7 @@ class Dispatcher:
             return str(result)
         except Exception as exc:
             raise ScpiException(
-                self._exception_handlers.resolve(exc, context, command)
+                self._exception_handlers.resolve(exc, context, command),
             )
 
     def _route(self, command: Command) -> tuple[Route, dict[str, str]]:
@@ -93,7 +96,9 @@ class Dispatcher:
         raise RouteNotFound
 
     def _match_command(
-        self, command: Command, pattern: Command
+        self,
+        command: Command,
+        pattern: Command,
     ) -> dict[str, str] | None:
         if command.common != pattern.common:
             return None
@@ -104,7 +109,9 @@ class Dispatcher:
         return self._match_nodes(command.nodes, pattern.nodes)
 
     def _match_nodes(
-        self, nodes: list[Node], pattern_nodes: list[Node]
+        self,
+        nodes: list[Node],
+        pattern_nodes: list[Node],
     ) -> dict[str, str] | None:
         node_index = 0
         bindings = {}
