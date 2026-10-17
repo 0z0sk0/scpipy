@@ -17,7 +17,10 @@ documentation = "https://scpipy.readthedocs.org/en/latest/"
 repository    = "https://github.com/0z0sk0/scpipy"
 
 [project.optional-dependencies]
-test = ['pytest']
+test = [
+    'pytest',
+    'pytest-asyncio'
+]
 
 [tool.setuptools.package-dir]
 '' = 'src'
