@@ -1,11 +1,13 @@
 import asyncio
 from collections.abc import Coroutine, Generator
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, TypeVar
 
 from scpipy.server.status.models import StandardEvent, StatusByte
 from scpipy.server.status.register import StatusRegister
 from scpipy.server.status.utils import _soft_clamp_value
+
+Result = TypeVar('Result')
 
 
 class StatusSystem:
@@ -225,7 +227,7 @@ class StatusSystem:
         finally:
             self._complete_operation(token)
 
-    def start_operation[Result](
+    def start_operation(
         self,
         coroutine: Coroutine[Any, Any, Result],
     ) -> asyncio.Task[Result]:
