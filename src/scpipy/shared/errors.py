@@ -33,6 +33,7 @@ class DefaultScpiErrors(enum.Enum):
     MISSING_PARAMETER = ScpiError(-109, 'Missing parameter')
     COMMAND_HEADER_ERROR = ScpiError(-110, 'Command header error')
     QUEUE_OVERFLOW = ScpiError(-350, 'Queue overflow')
+    EXECUTION_ERROR = ScpiError(-200, 'Execution error')
     DATA_OUT_OF_RANGE = ScpiError(-222, 'Data out of range')
 
 
