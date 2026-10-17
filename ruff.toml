@@ -1,0 +1,44 @@
+preview = true
+
+line-length = 79
+
+target-version = "py312"
+
+[format]
+quote-style = "single"
+indent-style = "space"
+line-ending = "lf"
+skip-magic-trailing-comma = false
+
+[lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    'N',
+    "C4",
+    "UP",
+    "COM812",
+    "PERF",
+    "PLC1901",
+    "FURB110",
+]
+ignore = ['N806', 'N807',]
+
+extend-safe-fixes = [
+    "C408",
+    "UP024",
+]
+
+[lint.isort]
+combine-as-imports = true
+
+split-on-trailing-comma = true
+
+[lint.per-file-ignores]
+"__init__.py" = [
+    "F401",
+    "F403",
+]
