@@ -46,7 +46,7 @@ class Dispatcher:
         except ParseError:
             raise ScpiException(
                 self._exception_handlers.resolve(
-                    ParserSyntaxError, context, None
+                    ParserSyntaxError(), context, None
                 )
             )
 
