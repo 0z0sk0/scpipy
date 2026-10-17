@@ -12,49 +12,92 @@ Usage example
 
 .. code-block:: python
 
-   from scpipy.server import Server, Router, RouteNotFound, ArgumentBindingError
+   from scpipy.server import Server, RouteNotFound, UnexpectedPositionalArgsError
    from scpipy.shared.errors import ScpiError
-
-   def handle_argument_error(exc, context, command):
-       return ScpiError(-20001, 'Invalid command arguments')
 
    server = Server('127.0.0.1', 5025)
 
-   # Add as decorator
    @server.add_exception_handler(RouteNotFound)
-   def route_not_found_handler(exc, context, command):
-       return ScpiError(-20002, 'Unknown command')
+   def route_not_found(exc, context, command):
+       return ScpiError(-110, 'Command header error')
 
-   # Or direct call method
-   server.add_exception_handler(
-       ArgumentBindingError,
-       handle_argument_error
+   def argument_error(exc, context, command):
+       return ScpiError(-108, 'Parameter not allowed')
+
+   server.add_exception_handler(UnexpectedPositionalArgsError, argument_error)
+
+Class registration
+------------------
+
+.. code-block:: python
+
+   from scpipy.server import Server
+   from scpipy.server.exception_handler import handles
+   from scpipy.shared.errors import DefaultScpiErrors, ScpiError
+
+   class MyError(Exception):
+       pass
+
+   class MyOtherError(Exception):
+       pass
+
+   class UserExceptionHandlers:
+       def __init__(self, device_name='Instrument'):
+           self.device_name = device_name
+           self.handled_count = 0
+
+       @handles(MyError)
+       def handle_my_error(self, exc, context, command) -> ScpiError:
+           self.handled_count += 1
+           return DefaultScpiErrors.EXECUTION_ERROR.value
+
+       @handles(MyOtherError)
+       def handle_my_other_error(self, exc, context, command) -> ScpiError:
+           self.handled_count += 1
+           return DefaultScpiErrors.PARAMETER_NOT_ALLOWED.value
+
+   server = Server('127.0.0.1', 5025)
+   handlers = server.exception_handler.include_class(
+       UserExceptionHandlers, device_name='Analyzer',
    )
 
-   server.run()
+``include_class`` instantiates a class once and returns that instance. Positional
+and keyword arguments are forwarded to its constructor. A ready instance can
+also be supplied, which supports dependency injection:
 
-Behavior
---------
+.. code-block:: python
 
-The exception handler registry resolves handlers by exception type and its
-base classes.
+   handlers = UserExceptionHandlers(device_name='Analyzer')
+   server.exception_handler.include_class(handlers)
 
-If no custom handler is registered, the server uses its built-in default
-mapping.
+The read-only ``server.exception_handler`` property exposes the current registry
+already used by the dispatcher. The original ``server.add_exception_handler``
+API remains available.
 
-Handlers receive:
+Supported methods
+-----------------
 
-* the raised exception,
-* the current execution context,
-* the parsed command, if available.
+* ``@handles(A, B)`` registers one method for multiple exception types.
+* Stacked ``@handles`` decorators are supported; repeated types on the same
+  method are deduplicated.
+* Instance methods, ``staticmethod`` and ``classmethod`` are supported.
+  ``@handles`` can appear above or below either descriptor decorator.
 
-The handler must return an instance of ``ScpiError``.
+For example:
 
-Notes
------
+.. code-block:: python
 
-Custom handlers are useful when you want to:
+   class SharedHandlers:
+       @staticmethod
+       @handles(ValueError, TypeError)
+       def bad_value(exc, context, command):
+           return ScpiError(-222, 'Data out of range')
 
-* return vendor-specific SCPI error codes.
-* customize error messages.
-* inspect session state through ``context``.
+Validation and precedence
+-------------------------
+
+All marked methods must be synchronous and callable with exactly the three
+positional arguments ``(exc, context, command)`` after binding.
+
+Only ``Exception`` subclasses are accepted. ``BaseException``,
+``KeyboardInterrupt`` and ``SystemExit`` cannot be registered with ``handles``.

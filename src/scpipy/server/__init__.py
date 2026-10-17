@@ -1,4 +1,5 @@
 from scpipy.server.context import Context
+from scpipy.server.exception_handler import handles
 from scpipy.server.exceptions import (
     AlreadyStarted,
     ConfigureException,

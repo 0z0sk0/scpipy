@@ -3,7 +3,7 @@ from collections.abc import Iterable
 
 from scpipy.server.builtin_router import builtin_router
 from scpipy.server.context import Context
-from scpipy.server.exception_handler import ExceptionHandler
+from scpipy.server.exception_handler import ExceptionCallback, ExceptionHandler
 from scpipy.server.lifespan_manager import LifespanManager
 from scpipy.server.routing import Router
 from scpipy.shared.errors import ScpiException
@@ -91,10 +91,15 @@ class Server:
         """
         self._router.include_router(routers)
 
+    @property
+    def exception_handler(self) -> ExceptionHandler:
+        """Return current registry used by dispatcher."""
+        return self._exception_handler
+
     def add_exception_handler(
         self,
         exc_type: type[Exception],
-        handler: ExceptionHandler | None = None,
+        handler: ExceptionCallback | None = None,
     ):
         return self._exception_handler.add_exception_handler(exc_type, handler)
 

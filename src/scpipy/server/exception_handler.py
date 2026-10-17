@@ -1,4 +1,6 @@
+import inspect
 from collections.abc import Callable
+from typing import TypeVar
 
 from scpipy.server.context import Context
 from scpipy.server.exceptions import (
@@ -15,7 +17,43 @@ from scpipy.shared.errors import (
     ScpiException,
 )
 
-ExceptionHandler = Callable[[Exception, Context, Command | None], ScpiError]
+ExceptionCallback = Callable[[Exception, Context, Command | None], ScpiError]
+_Handler = TypeVar('_Handler')
+_Container = TypeVar('_Container')
+_HANDLES_ATTRIBUTE = '__scpipy_exception_types__'
+
+
+def handles(*exc_types: type[Exception]) -> Callable[[_Handler], _Handler]:
+    """Mark a method for ExceptionHandler.include_class()."""
+
+    if not exc_types:
+        raise TypeError('handles() requires at least one exception type')
+    for exc_type in exc_types:
+        if not isinstance(exc_type, type) or not issubclass(
+            exc_type,
+            Exception,
+        ):
+            raise TypeError('handles() expects Exception subclasses')
+
+    def decorate(handler: _Handler) -> _Handler:
+        target = (
+            handler.__func__
+            if isinstance(handler, (staticmethod, classmethod))
+            else handler
+        )
+        if not inspect.isfunction(target):
+            raise TypeError(
+                'handles() expects a method, staticmethod or classmethod',
+            )
+        previous = getattr(target, _HANDLES_ATTRIBUTE, ())
+        setattr(
+            target,
+            _HANDLES_ATTRIBUTE,
+            tuple(dict.fromkeys(previous + exc_types)),
+        )
+        return handler
+
+    return decorate
 
 
 class ExceptionHandler:
@@ -24,7 +62,7 @@ class ExceptionHandler:
     """
 
     def __init__(self):
-        self._handlers: dict[type[Exception], ExceptionHandler] = {}
+        self._handlers: dict[type[Exception], ExceptionCallback] = {}
         self._register_default_exceptions()
 
     def _register_default_exceptions(self):
@@ -44,7 +82,7 @@ class ExceptionHandler:
     def add_exception_handler(
         self,
         exc_type: type[Exception],
-        handler: ExceptionHandler | None = None,
+        handler: ExceptionCallback | None = None,
     ):
         """
         Register an exception handler.
@@ -52,20 +90,96 @@ class ExceptionHandler:
         :param exc_type: Exception type handled by the callback.
         :type exc_type: type[Exception]
         :param handler: Callback that converts an exception into a SCPI error.
-        :type handler: ExceptionHandler | None
+        :type handler: ExceptionCallback | None
 
         :return: Registered handler or decorator wrapper.
-        :rtype: ExceptionHandler
+        :rtype: ExceptionCallback
         """
         if handler is not None:
             self._handlers[exc_type] = handler
             return handler
 
-        def wrapper(func: ExceptionHandler):
+        def wrapper(func: ExceptionCallback):
             self._handlers[exc_type] = func
             return func
 
         return wrapper
+
+    def include_class(
+        self,
+        container: type[_Container] | _Container,
+        *args,
+        **kwargs,
+    ) -> _Container:
+        """Bind and register all methods marked with handles()"""
+        if inspect.isclass(container):
+            instance = container(*args, **kwargs)
+        else:
+            if args or kwargs:
+                raise TypeError('Constructor arguments require a class')
+            instance = container
+
+        pending: dict[type[Exception], ExceptionCallback] = {}
+        names: set[str] = set()
+        for owner in type(instance).__mro__:
+            for name, member in vars(owner).items():
+                if name in names:
+                    continue
+
+                names.add(name)
+                target = (
+                    member.__func__
+                    if isinstance(member, (staticmethod, classmethod))
+                    else member
+                )
+
+                if isinstance(target, property):
+                    if getattr(target.fget, _HANDLES_ATTRIBUTE, ()):
+                        raise TypeError('handles() cannot decorate a property')
+                    continue
+
+                if not inspect.isfunction(target):
+                    continue
+
+                exc_types = getattr(target, _HANDLES_ATTRIBUTE, ())
+                if not exc_types:
+                    continue
+
+                callback = getattr(instance, name)
+                self._validate_class_handler(callback, name)
+
+                for exc_type in exc_types:
+                    if exc_type in pending:
+                        raise ValueError(
+                            f'Duplicate handler for {exc_type.__name__}',
+                        )
+                    pending[exc_type] = callback
+
+        if not pending:
+            raise ValueError('No methods decorated with handles() found')
+
+        self._handlers.update(pending)
+        return instance
+
+    @staticmethod
+    def _validate_class_handler(
+        callback: ExceptionCallback,
+        name: str,
+    ) -> None:
+        target = inspect.unwrap(callback)
+        if (
+            inspect.iscoroutinefunction(target)
+            or inspect.isasyncgenfunction(target)
+            or inspect.isgeneratorfunction(target)
+        ):
+            raise TypeError('Exception handler cannot be asynchronous')
+
+        try:
+            inspect.signature(callback).bind(None, None, None)
+        except (TypeError, ValueError) as exc:
+            raise TypeError(
+                'Exception handler must accept (exc, context, command)',
+            ) from exc
 
     def resolve(
         self,
@@ -102,7 +216,7 @@ class ExceptionHandler:
     def _find_handler(
         self,
         exc_type: type[Exception],
-    ) -> ExceptionHandler | None:
+    ) -> ExceptionCallback | None:
         for cls in exc_type.__mro__:
             handler = self._handlers.get(cls)
             if handler is not None:
