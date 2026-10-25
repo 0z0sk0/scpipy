@@ -13,6 +13,34 @@ _NODE_TOKEN_RE = re.compile(
 )
 
 
+def _split_quoted(text: str, separator: str) -> list[str]:
+    parts = []
+    quote = None
+    start = 0
+    pos = 0
+
+    while pos < len(text):
+        character = text[pos]
+        if quote is not None:
+            if character == quote:
+                if pos + 1 < len(text) and text[pos + 1] == quote:
+                    pos += 1
+                else:
+                    quote = None
+        elif character in ('"', "'"):
+            quote = character
+        elif character == separator:
+            parts.append(text[start:pos])
+            start = pos + 1
+        pos += 1
+
+    if quote is not None:
+        raise ParseError('Unclosed string')
+
+    parts.append(text[start:])
+    return parts
+
+
 class Parser:
     """
     Parse SCPI command lines into command objects.
@@ -91,7 +119,9 @@ class Parser:
             raise ParseError('Empty line')
 
         return [
-            command.strip() for command in line.split(';') if command.strip()
+            command.strip()
+            for command in _split_quoted(line, ';')
+            if command.strip()
         ]
 
     @classmethod
@@ -241,5 +271,7 @@ class Parser:
         if len(parts) == 1:
             return node, []
 
-        args = [arg.strip() for arg in parts[1].split(',') if arg.strip()]
+        args = [
+            arg.strip() for arg in _split_quoted(parts[1], ',') if arg.strip()
+        ]
         return node, args

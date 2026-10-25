@@ -24,11 +24,48 @@ def test_parser_command_with_enum_arg(parser):
     assert parsed_command.args[0].value == 'SIN'
 
 
-def test_parser_command_with_string_arg(parser):
-    parsed_command = parser.parse('SOURce:NAMe "TEST"')[0]
+@pytest.mark.parametrize(
+    'value',
+    [
+        '"TEST"',
+        "'TEST'",
+        '"A,B"',
+        "'A,B'",
+        '"A;B"',
+        "'A;B'",
+        '"A"",B;C"',
+        "'A'',B;C'",
+        '"A\'B,C;D"',
+        "'A\"B,C;D'",
+        '"  A,B;C  "',
+        '""',
+        "''",
+    ],
+)
+def test_parser_command_with_string_arg(parser, value):
+    parsed_commands = parser.parse('SOURce:NAMe ' + value)
 
-    assert len(parsed_command.args) == 1
-    assert parsed_command.args[0].value == '"TEST"'
+    assert len(parsed_commands) == 1
+    assert [arg.value for arg in parsed_commands[0].args] == [value]
+
+
+def test_parser_command_with_mixed_args(parser):
+    parsed_command = parser.parse('DISP:TEXT "A,B", 2, \'C;D\'')[0]
+
+    assert [arg.value for arg in parsed_command.args] == [
+        '"A,B"',
+        '2',
+        "'C;D'",
+    ]
+
+
+@pytest.mark.parametrize(
+    'value',
+    ['"A', "'A", '"A""', "'A''", '"A;B', "'A,B"],
+)
+def test_reject_unclosed_string_arg(parser, value):
+    with pytest.raises(ParseError, match='Unclosed string'):
+        parser.parse('DISP:TEXT ' + value)
 
 
 def test_parse_node_with_numeric_arg(parser):
