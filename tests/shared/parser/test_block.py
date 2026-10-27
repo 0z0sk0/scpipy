@@ -89,3 +89,20 @@ def test_parser_block_command_with_common_query(parser):
     assert second.root_node is True
     assert len(second.nodes) == 1
     assert second.nodes[0].full == '*CLS'
+
+
+def test_parser_block_command_with_quoted_args(parser):
+    commands = parser.parse(
+        ':DISP:TEXT "A;B,C";*OPC?;STATe?;:SYSTem:ERRor?',
+    )
+
+    assert len(commands) == 4
+    assert [arg.value for arg in commands[0].args] == ['"A;B,C"']
+    assert commands[1].common is True
+    assert commands[1].query is True
+    assert [node.short for node in commands[1].nodes] == ['*OPC']
+    assert commands[2].query is True
+    assert [node.short for node in commands[2].nodes] == ['DISP', 'STAT']
+    assert commands[3].root_node is True
+    assert commands[3].query is True
+    assert [node.short for node in commands[3].nodes] == ['SYST', 'ERR']
