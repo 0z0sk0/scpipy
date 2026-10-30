@@ -53,6 +53,7 @@ class Router:
     def register(self, command: str):
         def wrapper(func: Callable):
             self.add_route(command, func)
+            return func
 
         return wrapper
 
