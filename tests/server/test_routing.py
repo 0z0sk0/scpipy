@@ -13,10 +13,30 @@ def test_registration_lookup_and_invocation():
         context.state[channel] = value
 
     route = router.route('SOURce<channel>:VOLTage <value>')
+    assert route.handler is set_voltage
+    direct_context = Context()
+    assert set_voltage(direct_context, '5', channel='3') is None
+    assert direct_context.state == {'3': '5'}
+
     context = Context()
     assert route.invoke(context, '10', channel='2') is None
     assert context.state == {'2': '10'}
     assert route.pattern.nodes[0].arg.value == 'channel'
+
+
+def test_stacked_registration_keeps_handler():
+    router = Router()
+
+    @router.register('FIRST?')
+    @router.register('SECOND?')
+    def handler(context):
+        return 'ok'
+
+    assert handler(Context()) == 'ok'
+    for command in ('FIRST?', 'SECOND?'):
+        route = router.route(command)
+        assert route.handler is handler
+        assert route.invoke(Context()) == 'ok'
 
 
 def test_missing_route_raises():
