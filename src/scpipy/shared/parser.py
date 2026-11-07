@@ -271,7 +271,7 @@ class Parser:
         if len(parts) == 1:
             return node, []
 
-        args = [
-            arg.strip() for arg in _split_quoted(parts[1], ',') if arg.strip()
-        ]
+        args = [arg.strip() for arg in _split_quoted(parts[1], ',')]
+        if any(not arg for arg in args):
+            raise ParseError('Empty argument')
         return node, args
