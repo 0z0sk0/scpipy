@@ -30,13 +30,12 @@ class QueueItem:
 
     :param type: Type of the queued operation.
     :type type: OperationType
-    :param value: Operation payload, usually a command string, or ``None`` for
-        operations without a payload.
-    :type value: str | None
+    :param value: A command string, a tuple of bulk messages, or ``None``.
+    :type value: str | tuple[str, ...] | None
     :param future: Future used to deliver the operation result or exception.
     :type future: asyncio.Future
     """
 
     type: OperationType
-    value: str | None
+    value: str | tuple[str, ...] | None
     future: asyncio.Future

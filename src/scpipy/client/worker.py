@@ -1,10 +1,13 @@
 import asyncio
 import contextlib
+from typing import cast
 
 import pyvisa
 
 from scpipy.client.exceptions import ClientConnectionError, ClientStopped
 from scpipy.client.models import OperationType, QueueItem
+
+OperationResult = int | str | list[int | str] | None
 
 
 class Worker:
@@ -94,6 +97,16 @@ class Worker:
         result = await self._submit(OperationType.QUERY, command)
         return str(result)
 
+    async def write_many(self, messages: tuple[str, ...]) -> list[int]:
+        """Enqueue a batch of write messages as one operation."""
+        result = await self._submit(OperationType.WRITE, messages)
+        return cast(list[int], result)
+
+    async def query_many(self, messages: tuple[str, ...]) -> list[str]:
+        """Enqueue a batch of query messages as one operation."""
+        result = await self._submit(OperationType.QUERY, messages)
+        return cast(list[str], result)
+
     async def close(self):
         """
         Stop the worker and close the instrument.
@@ -106,7 +119,7 @@ class Worker:
 
         self._closing = True
         loop = asyncio.get_running_loop()
-        future: asyncio.Future[int | str | None] = loop.create_future()
+        future: asyncio.Future[OperationResult] = loop.create_future()
 
         await self._queue.put(QueueItem(OperationType.CLOSE, None, future))
 
@@ -123,8 +136,8 @@ class Worker:
     async def _submit(
         self,
         op: OperationType,
-        value: str | None,
-    ) -> int | str | None:
+        value: str | tuple[str, ...] | None,
+    ) -> OperationResult:
         if self._closed:
             raise ClientConnectionError('Client is already closed')
         if self._closing:
@@ -133,7 +146,7 @@ class Worker:
             raise ClientConnectionError('Client worker is not started')
 
         loop = asyncio.get_running_loop()
-        future: asyncio.Future[int | str | None] = loop.create_future()
+        future: asyncio.Future[OperationResult] = loop.create_future()
         await self._queue.put(QueueItem(op, value, future))
         return await future
 
@@ -170,29 +183,27 @@ class Worker:
             self._fail_pending_operations(ClientStopped())
             self._closed = True
 
-    async def _execute_item(self, item: QueueItem) -> int | str:
+    async def _execute_item(self, item: QueueItem) -> OperationResult:
+        value = item.value
         match item.type:
             case OperationType.WRITE:
-                if item.value is None:
+                if value is None:
                     raise ValueError('Write operation requires command')
-                return await asyncio.to_thread(
-                    self._instrument.write,
-                    item.value,
-                )
-
+                send = self._instrument.write
             case OperationType.READ:
                 return await asyncio.to_thread(self._instrument.read)
-
             case OperationType.QUERY:
-                if item.value is None:
+                if value is None:
                     raise ValueError('Query operation requires command')
-                return await asyncio.to_thread(
-                    self._instrument.query,
-                    item.value,
-                )
-
+                send = self._instrument.query
             case _:
                 raise ValueError(f'Unsupported operation type: {item.type}')
+
+        if isinstance(value, tuple):
+            return await asyncio.to_thread(
+                lambda: [send(message) for message in value],
+            )
+        return await asyncio.to_thread(send, value)
 
     def _sync_close(self):
         self._instrument.close()
