@@ -1,10 +1,60 @@
 import asyncio
 import contextlib
+from collections.abc import Callable, Iterable
 
 import pyvisa
 
 from scpipy.client.exceptions import ClientConnectionError
 from scpipy.client.worker import Worker
+from scpipy.shared.parser import _split_quoted
+
+BulkPolicy = Callable[[tuple[str, ...]], Iterable[int]]
+
+
+def _bulk_messages(
+    commands: Iterable[str],
+    *,
+    query: bool,
+    policy: BulkPolicy | None,
+) -> tuple[str, ...]:
+    if isinstance(commands, str):
+        raise TypeError('Pass an iterable of individual SCPI commands')
+
+    rooted = []
+    for command in commands:
+        if not isinstance(command, str):
+            raise TypeError('Bulk commands must be strings')
+        if '\r' in command or '\n' in command:
+            raise ValueError('Bulk commands must fit on one line')
+        command = command.strip()
+        if not command or len(_split_quoted(command, ';')) != 1:
+            raise ValueError('Each bulk entry must be one SCPI command')
+        header = command.split(maxsplit=1)[0]
+        if header.endswith('?') != query:
+            kind = 'query' if query else 'write'
+            raise ValueError(f'Bulk operation requires only {kind} commands')
+        # Each input is a standalone command. Restore its root in the block.
+        if not command.startswith((':', '*')):
+            command = f':{command}'
+        rooted.append(command)
+
+    if not rooted:
+        return ()
+    if policy is None:
+        return (';'.join(rooted),)
+
+    messages = []
+    start = 0
+    for size in policy(tuple(rooted)):
+        if type(size) is not int or not 0 < size <= len(rooted) - start:
+            raise ValueError('Bulk policy returned an invalid block size')
+        end = start + size
+        messages.append(';'.join(rooted[start:end]))
+        start = end
+
+    if start != len(rooted):
+        raise ValueError('Bulk policy must include every command')
+    return tuple(messages)
 
 
 class Client:
@@ -213,6 +263,42 @@ class Client:
         """
         worker = self._get_worker()
         return await worker.query(command)
+
+    async def write_many(
+        self,
+        commands: Iterable[str],
+        *,
+        policy: BulkPolicy | None = None,
+    ) -> list[int]:
+        """
+        Send individual SCPI write commands in one or more program messages.
+
+        Each input command starts at the SCPI root. By default, all commands
+        go in one block. A policy receives the tuple of rooted command strings
+        and returns positive block sizes whose sum equals the command count.
+
+        Return the byte count for each block, in order. An I/O error stops
+        the batch. Earlier blocks may already have reached the instrument.
+        """
+        worker = self._get_worker()
+        messages = _bulk_messages(commands, query=False, policy=policy)
+        return await worker.write_many(messages)
+
+    async def query_many(
+        self,
+        commands: Iterable[str],
+        *,
+        policy: BulkPolicy | None = None,
+    ) -> list[str]:
+        """
+        Send individual SCPI queries using the grouping in :meth:`write_many`.
+
+        Return the raw text reply for each block, in order. The instrument
+        must support multiple queries per program message to use such blocks.
+        """
+        worker = self._get_worker()
+        messages = _bulk_messages(commands, query=True, policy=policy)
+        return await worker.query_many(messages)
 
     def _get_worker(self) -> Worker:
         if not self._started or self._worker is None:
